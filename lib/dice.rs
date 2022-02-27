@@ -57,9 +57,7 @@ impl WeightTransform {
     }
 
     pub fn boost_values(factor: f64, values: &[u32]) -> Self {
-        if factor.is_sign_negative() {
-            panic!("Probability densities cannot be negative");
-        }
+        debug_assert!(!factor.is_sign_negative());
         let mut boost = WeightTransform::identity();
         for v in values {
             let i = (*v - 1) as usize;
@@ -73,9 +71,7 @@ impl WeightTransform {
     }
 
     pub fn rescale(&self, rhs: f64) -> WeightTransform {
-        if rhs.is_sign_negative() {
-            panic!("Probability densities cannot be negative");
-        }
+        debug_assert!(!rhs.is_sign_negative());
         let mut matrix = self.matrix;
         for i in 0..6 {
             for j in 0..6 {
