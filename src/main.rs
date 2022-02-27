@@ -4,7 +4,7 @@ use dicey_dungeons::*;
 mod main_menu;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-enum AppState {
+pub enum AppState {
     MainMenu,
     Game,
 }
