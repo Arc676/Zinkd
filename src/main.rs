@@ -1,7 +1,5 @@
 use bevy::prelude::*;
-
-mod map;
-mod dice;
+use dicey_dungeons::*;
 
 fn main() {
     App::new()

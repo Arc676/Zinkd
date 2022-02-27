@@ -6,3 +6,12 @@ edition = "2021"
 [dependencies]
 bevy = "0.6.1"
 rand = "0.8.5"
+
+[lib]
+name = "dicey_dungeons"
+path = "lib/lib.rs"
+crate-type = ["lib"]
+
+[[bin]]
+name = "dicey_dungeons"
+path = "src/main.rs"
