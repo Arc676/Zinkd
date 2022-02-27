@@ -29,3 +29,32 @@ impl WeightedDie {
         0
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::dice::WeightedDie;
+
+    fn generate_rolls(die: &WeightedDie, count: u32) -> [i32; 6] {
+        let mut results = [0; 6];
+        for _ in 0..count {
+            let roll = die.roll();
+            results[roll as usize] += 1;
+        }
+        results
+    }
+
+    #[test]
+    fn fair_rolls() {
+        let die = WeightedDie::fair_die();
+        let results = generate_rolls(&die, 1000);
+        dbg!(results);
+    }
+
+    #[test]
+    fn unfair_rolls() {
+        let die = WeightedDie::with_weights([1, 2, 3, 4, 5, 6]);
+        let results = generate_rolls(&die, 1000);
+        dbg!(results);
+        dbg!(results.map(|x| x as f64 / results[0] as f64));
+    }
+}
