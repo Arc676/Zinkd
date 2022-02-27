@@ -1,7 +1,9 @@
 use rand::Rng;
 
+type Weights = [u32; 6];
+
 pub struct WeightedDie {
-    weights: [u32; 6],
+    weights: Weights,
     total: u32
 }
 
@@ -9,7 +11,7 @@ pub struct WeightTransform {
     matrix: [[f64; 6]; 6]
 }
 
-fn sum_values(vec: [u32; 6]) -> u32 {
+fn sum_values(vec: Weights) -> u32 {
     vec.iter().fold(0, |mut acc, x| {
         acc += x;
         acc
@@ -21,12 +23,12 @@ impl WeightedDie {
         WeightedDie { weights: [1; 6], total: 6 }
     }
 
-    pub fn with_weights(weights: [u32; 6]) -> Self {
+    pub fn with_weights(weights: Weights) -> Self {
         let total = sum_values(weights);
         WeightedDie { weights, total }
     }
 
-    pub fn weights(&self) -> [u32; 6] {
+    pub fn weights(&self) -> Weights {
         self.weights
     }
 
@@ -81,7 +83,7 @@ impl WeightTransform {
         WeightTransform { matrix }
     }
 
-    pub fn apply(&self, rhs: [u32; 6]) -> [u32; 6] {
+    pub fn apply(&self, rhs: Weights) -> Weights {
         let mut res = [0; 6];
         for i in 0..6 {
             for j in 0..6 {
