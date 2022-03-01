@@ -129,10 +129,10 @@ impl Map {
         let Coordinates(x0, y0) = target;
         let mut rng = rand::thread_rng();
         let x_low = if x0 < distance { 0 } else { x0 - distance };
-        let x = rng.gen_range(x_low..=(x0 + distance).min(self.width()));
+        let x = rng.gen_range(x_low..=(x0 + distance).min(self.width() - 1));
         let dx = x0.max(x) - x0.min(x);
         let dy = distance - dx;
-        if y0 + dy > self.height() {
+        if y0 + dy >= self.height() {
             Coordinates(x, y0 - dy)
         } else if y0 < dy {
             Coordinates(x, y0 + dy)
