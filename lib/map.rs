@@ -62,7 +62,7 @@ impl Map {
         map_width: usize,
         map_height: usize,
         players: u32,
-        travel_distance: u32,
+        travel_distance: usize,
     ) -> Self {
         let mut grid = Grid::with_capacity(map_height);
         for row in 0..map_height {
@@ -85,7 +85,7 @@ impl Map {
 
         // Set random starting positions for players
         for _ in 0..players {
-            let start = map.get_random_cell();
+            let start = map.get_random_cell_with_distance(goal, travel_distance);
             map.connect_cells(start, goal);
 
             map.starting_points.push(start);
@@ -123,6 +123,25 @@ impl Map {
         let x = rng.gen_range(0..self.width());
         let y = rng.gen_range(0..self.height());
         Coordinates(x, y)
+    }
+
+    fn get_random_cell_with_distance(&self, target: Coordinates, distance: usize) -> Coordinates {
+        let Coordinates(x0, y0) = target;
+        let mut rng = rand::thread_rng();
+        let x = rng.gen_range((x0 - distance).max(0)..=(x0 + distance).min(self.width()));
+        let dx = x0.max(x) - x0.min(x);
+        let dy = distance - dx;
+        if y0 + dy > self.height() {
+            Coordinates(x, y0 - dy)
+        } else if y0 < dy {
+            Coordinates(x, y0 + dy)
+        } else {
+            if rng.gen_bool(0.5) {
+                Coordinates(x, y0 - dy)
+            } else {
+                Coordinates(x, y0 + dy)
+            }
+        }
     }
 
     fn connect_cells(&mut self, start: Coordinates, end: Coordinates) {
