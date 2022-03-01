@@ -128,7 +128,8 @@ impl Map {
     fn get_random_cell_with_distance(&self, target: Coordinates, distance: usize) -> Coordinates {
         let Coordinates(x0, y0) = target;
         let mut rng = rand::thread_rng();
-        let x = rng.gen_range((x0 - distance).max(0)..=(x0 + distance).min(self.width()));
+        let x_low = if x0 < distance { 0 } else { x0 - distance };
+        let x = rng.gen_range(x_low..=(x0 + distance).min(self.width()));
         let dx = x0.max(x) - x0.min(x);
         let dy = distance - dx;
         if y0 + dy > self.height() {
@@ -147,11 +148,26 @@ impl Map {
     fn connect_cells(&mut self, start: Coordinates, end: Coordinates) {
         let Coordinates(x0, y0) = start;
         let Coordinates(x1, y1) = end;
-        let x_start = if x0 < x1 { x0 + 1 } else { x0 - 1 };
-        self.straight_path(x_start..=x1, true, y0);
 
-        let y_start = if y0 < y1 { y0 + 1 } else { y0 - 1 };
-        self.straight_path(y_start..y1, false, x1);
+        let mut corner = true;
+
+        if x0 != x1 {
+            let range = if x0 < x1 { (x0 + 1)..x1 } else { (x1 + 1)..x0 };
+            self.straight_path(range, true, y0);
+        } else {
+            corner = false;
+        }
+
+        if y0 != y1 {
+            let range = if y0 < y1 { (y0 + 1)..y1 } else { (y1 + 1)..y0 };
+            self.straight_path(range, false, x1);
+        } else {
+            corner = false;
+        }
+
+        if corner {
+            self.supplement_cell(Coordinates(x1, y0), NORTH | EAST | SOUTH | WEST);
+        }
     }
 
     fn straight_path<R>(&mut self, range: R, x_range: bool, fixed_coord: usize)
