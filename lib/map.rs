@@ -41,7 +41,7 @@ const SOUTH: u8 = 1 << 1;
 const EAST: u8 = 1 << 2;
 const WEST: u8 = 1 << 3;
 
-enum GridCell {
+pub enum GridCell {
     Wall,
     Path(Direction, items::PossibleItem),
     Goal,
@@ -191,5 +191,53 @@ impl Map {
                 .enumerate()
                 .map(move |(x, cell)| (Coordinates(x, y), cell))
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::map::*;
+
+    #[test]
+    fn generate_map() {
+        let map = Map::generate_random_map(10, 10, 3, 5);
+        let mut render = [[' '; 10]; 10];
+        for (position, cell) in map.iter() {
+            let Coordinates(x, y) = position;
+            render[y][x] = match *cell {
+                GridCell::Wall => '.',
+                GridCell::Path(direction, _) => match direction {
+                    NORTH => '^',
+                    SOUTH => 'v',
+                    EAST => '>',
+                    WEST => '<',
+                    _ => {
+                        if direction == NORTH | SOUTH {
+                            '|'
+                        } else if direction == EAST | WEST {
+                            '-'
+                        } else if direction == NORTH | EAST | SOUTH | WEST {
+                            '+'
+                        } else {
+                            '?'
+                        }
+                    }
+                },
+                GridCell::Goal => '*',
+            };
+        }
+
+        for (i, start) in map.starting_points.iter().enumerate() {
+            let Coordinates(x, y) = start.clone();
+            render[y][x] = ('1' as u8 + i as u8) as char;
+        }
+
+        let rendered = render.iter().fold(String::new(), |mut text, row| {
+            text.push('@');
+            text.push_str(row.iter().collect::<String>().as_str());
+            text.push_str("@\n");
+            text
+        });
+        println!("@@@@@@@@@@@@\n{}@@@@@@@@@@@@", rendered);
     }
 }
