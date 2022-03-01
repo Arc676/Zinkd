@@ -32,14 +32,113 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-pub struct Node {
+use crate::items;
+use rand::Rng;
+
+type Direction = u8;
+const NORTH: u8 = 1 << 0;
+const SOUTH: u8 = 1 << 1;
+const EAST: u8 = 1 << 2;
+const WEST: u8 = 1 << 3;
+
+enum GridCell {
+    Wall,
+    Path(Direction, items::PossibleItem),
+    Goal,
 }
 
+#[derive(Copy, Clone)]
+pub struct Coordinates(usize, usize);
+
+type Grid = Vec<Vec<GridCell>>;
 pub struct Map {
+    grid: Grid,
+    goal: Coordinates,
+    starting_points: Vec<Coordinates>,
 }
 
 impl Map {
-    fn generate_random_map() -> Self {
-        Map {}
+    fn generate_random_map(
+        map_width: usize,
+        map_height: usize,
+        players: u32,
+        travel_distance: u32,
+    ) -> Self {
+        let mut grid = Grid::with_capacity(map_height);
+        for row in 0..map_height {
+            grid.push(Vec::with_capacity(map_width));
+            for _ in 0..map_width {
+                grid[row].push(GridCell::Wall);
+            }
+        }
+
+        let mut map = Map {
+            grid,
+            goal: Coordinates(0, 0),
+            starting_points: vec![],
+        };
+
+        // Randomly place goal
+        let goal = map.get_random_cell();
+        map.goal = goal;
+        map.set_cell(goal, GridCell::Goal);
+
+        // Set random starting positions for players
+        for _ in 0..players {
+            let start = map.get_random_cell();
+            map.connect_cells(start, goal);
+
+            map.starting_points.push(start);
+        }
+
+        map
+    }
+
+    fn set_cell(&mut self, coordinates: Coordinates, cell: GridCell) {
+        let Coordinates(x, y) = coordinates;
+        self.grid[y][x] = cell;
+    }
+
+    fn supplement_cell(&mut self, coordinates: Coordinates, direction: Direction) {
+        let Coordinates(x, y) = coordinates;
+        match &mut self.grid[y][x] {
+            GridCell::Wall => self.set_cell(coordinates, GridCell::Path(direction, None)),
+            GridCell::Path(existing, _) => {
+                *existing |= direction;
+            }
+            GridCell::Goal => panic!("Cannot supplement goal cell"),
+        }
+    }
+
+    fn get_random_cell(&self) -> Coordinates {
+        let mut rng = rand::thread_rng();
+        let x = rng.gen_range(0..self.grid[0].len());
+        let y = rng.gen_range(0..self.grid.len());
+        Coordinates(x, y)
+    }
+
+    fn connect_cells(&mut self, start: Coordinates, end: Coordinates) {
+        let Coordinates(x0, y0) = start;
+        let Coordinates(x1, y1) = end;
+        let x_start = if x0 < x1 { x0 + 1 } else { x0 - 1 };
+        self.straight_path(x_start..=x1, true, y0);
+
+        let y_start = if y0 < y1 { y0 + 1 } else { y0 - 1 };
+        self.straight_path(y_start..y1, false, x1);
+    }
+
+    fn straight_path<R>(&mut self, range: R, x_range: bool, fixed_coord: usize)
+    where
+        R: IntoIterator<Item = usize>,
+    {
+        for coord in range {
+            let node = if x_range {
+                Coordinates(coord, fixed_coord)
+            } else {
+                Coordinates(fixed_coord, coord)
+            };
+            let direction = if x_range { EAST | WEST } else { NORTH | SOUTH };
+            self.supplement_cell(node, direction);
+        }
     }
 }
