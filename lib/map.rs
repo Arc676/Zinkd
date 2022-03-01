@@ -168,4 +168,12 @@ impl Map {
             self.supplement_cell(node, direction);
         }
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = (Coordinates, &GridCell)> {
+        self.grid.iter().enumerate().flat_map(|(y, row)| {
+            row.iter()
+                .enumerate()
+                .map(move |(x, cell)| (Coordinates(x, y), cell))
+        })
+    }
 }
