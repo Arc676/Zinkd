@@ -110,10 +110,18 @@ impl Map {
         }
     }
 
+    fn width(&self) -> usize {
+        self.grid[0].len()
+    }
+
+    fn height(&self) -> usize {
+        self.grid.len()
+    }
+
     fn get_random_cell(&self) -> Coordinates {
         let mut rng = rand::thread_rng();
-        let x = rng.gen_range(0..self.grid[0].len());
-        let y = rng.gen_range(0..self.grid.len());
+        let x = rng.gen_range(0..self.width());
+        let y = rng.gen_range(0..self.height());
         Coordinates(x, y)
     }
 
