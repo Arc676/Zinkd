@@ -136,12 +136,10 @@ impl Map {
             Coordinates(x, y0 - dy)
         } else if y0 < dy {
             Coordinates(x, y0 + dy)
+        } else if rng.gen_bool(0.5) {
+            Coordinates(x, y0 - dy)
         } else {
-            if rng.gen_bool(0.5) {
-                Coordinates(x, y0 - dy)
-            } else {
-                Coordinates(x, y0 + dy)
-            }
+            Coordinates(x, y0 + dy)
         }
     }
 
@@ -229,7 +227,7 @@ mod tests {
 
         for (i, start) in map.starting_points.iter().enumerate() {
             let Coordinates(x, y) = start.clone();
-            render[y][x] = ('1' as u8 + i as u8) as char;
+            render[y][x] = (b'1' + i as u8) as char;
         }
 
         let rendered = render.iter().fold(String::new(), |mut text, row| {
