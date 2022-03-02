@@ -58,7 +58,7 @@ pub struct Map {
 }
 
 impl Map {
-    fn generate_random_map(
+    pub fn generate_random_map(
         map_width: usize,
         map_height: usize,
         players: u32,
@@ -226,7 +226,7 @@ mod tests {
         }
 
         for (i, start) in map.starting_points.iter().enumerate() {
-            let Coordinates(x, y) = start.clone();
+            let Coordinates(x, y) = *start;
             render[y][x] = (b'1' + i as u8) as char;
         }
 
