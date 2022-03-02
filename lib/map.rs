@@ -36,10 +36,13 @@ use crate::items;
 use rand::Rng;
 
 type Direction = u8;
-const NORTH: u8 = 1 << 0;
-const SOUTH: u8 = 1 << 1;
-const EAST: u8 = 1 << 2;
-const WEST: u8 = 1 << 3;
+pub const NORTH: u8 = 1 << 0;
+pub const SOUTH: u8 = 1 << 1;
+pub const LONGITUDINAL: u8 = NORTH | SOUTH;
+pub const EAST: u8 = 1 << 2;
+pub const WEST: u8 = 1 << 3;
+pub const LATITUDINAL: u8 = EAST | WEST;
+pub const OMNIDIRECTIONAL: u8 = LONGITUDINAL | LATITUDINAL;
 
 pub enum GridCell {
     Wall,
@@ -48,7 +51,7 @@ pub enum GridCell {
 }
 
 #[derive(Copy, Clone)]
-pub struct Coordinates(usize, usize);
+pub struct Coordinates(pub usize, pub usize);
 
 type Grid = Vec<Vec<GridCell>>;
 pub struct Map {

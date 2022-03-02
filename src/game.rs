@@ -32,21 +32,76 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-use bevy::prelude::*;
-use dicey_dungeons::map::Map;
+use crate::settings::GameSettings;
 use crate::AppState;
+use bevy::prelude::*;
+use dicey_dungeons::map::*;
 
 pub struct DungeonGame {
     map: Map,
 }
 
-pub fn setup_game(mut commands: Commands, asset_server: Res<AssetServer>) {
-}
-
-pub fn update_game(
-    mut state: ResMut<State<AppState>>,
+pub fn setup_game(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    settings: Res<GameSettings>,
 ) {
+    commands
+        .spawn()
+        .insert_bundle(OrthographicCameraBundle::new_2d());
+    let map = Map::generate_random_map(
+        settings.map_width(),
+        settings.map_height(),
+        settings.players(),
+        settings.travel_distance(),
+    );
+
+    let tile_size = Vec2::splat(32.);
+
+    let straight = asset_server.load("tiles/tile_straight.png");
+    let omnidirectional = asset_server.load("tiles/tile_cross2.png");
+    let wall = asset_server.load("tiles/tile_wall.png");
+    let goal = asset_server.load("sprites/goal.png");
+
+    let mut sprites = vec![];
+    for (Coordinates(x, y), cell) in map.iter() {
+        let texture = match cell {
+            GridCell::Wall => wall.clone(),
+            GridCell::Path(direction, _) => match *direction {
+                OMNIDIRECTIONAL => omnidirectional.clone(),
+                LONGITUDINAL | LATITUDINAL => straight.clone(),
+                _ => panic!("Unknown direction"),
+            },
+            GridCell::Goal => goal.clone(),
+        };
+        let rotation = if let GridCell::Path(LATITUDINAL, _) = cell {
+            Quat::from_rotation_z(90.0f32.to_radians())
+        } else {
+            Quat::IDENTITY
+        };
+        let translation = (Vec2::new(x as f32, y as f32) * tile_size).extend(0.);
+        sprites.push(SpriteBundle {
+            texture,
+            transform: Transform {
+                translation,
+                rotation,
+                ..Default::default()
+            },
+            sprite: Sprite {
+                custom_size: Some(tile_size),
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+    }
+    commands.spawn_batch(sprites);
+    let game = DungeonGame { map };
+    commands.insert_resource(game);
 }
 
-pub fn cleanup_game(mut commands: Commands, menu: Res<DungeonGame>) {
+pub fn update_game(mut state: ResMut<State<AppState>>) {
+}
+
+pub fn cleanup_game(mut commands: Commands) {
+    commands.remove_resource::<DungeonGame>()
 }
