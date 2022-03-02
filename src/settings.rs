@@ -34,14 +34,15 @@
 
 use crate::AppState;
 use bevy::prelude::*;
-use bevy_egui::{egui, EguiContext};
+use bevy_egui::egui::emath::Numeric;
 use bevy_egui::egui::{Separator, Slider, Ui};
+use bevy_egui::{egui, EguiContext};
 
 pub struct GameSettings {
     players: u32,
-    map_width: u32,
-    map_height: u32,
-    initial_travel_distance: u32,
+    map_width: usize,
+    map_height: usize,
+    initial_travel_distance: usize,
 }
 
 impl Default for GameSettings {
@@ -64,20 +65,23 @@ impl GameSettings {
         self.players
     }
 
-    pub fn map_width(&self) -> u32 {
+    pub fn map_width(&self) -> usize {
         self.map_width
     }
 
-    pub fn map_height(&self) -> u32 {
+    pub fn map_height(&self) -> usize {
         self.map_height
     }
 
-    pub fn travel_distance(&self) -> u32 {
+    pub fn travel_distance(&self) -> usize {
         self.initial_travel_distance
     }
 }
 
-fn number_setting(ui: &mut Ui, num: &mut u32, min: u32, max: u32, lbl: &str) {
+fn number_setting<T>(ui: &mut Ui, num: &mut T, min: T, max: T, lbl: &str)
+where
+    T: Numeric,
+{
     ui.label(lbl);
     let slider = Slider::new(num, min..=max);
     ui.add(slider);
@@ -98,10 +102,18 @@ pub fn settings_ui(
         let sep = Separator::default().spacing(12.).horizontal();
         ui.add(sep);
 
-        ui.label("All players' starting positions will be connected to the goal by a path of \
+        ui.label(
+            "All players' starting positions will be connected to the goal by a path of \
          a fixed length before additional paths are generated. This initial distance can be \
-         freely chosen.");
-        number_setting(ui, &mut settings.initial_travel_distance, 2, 20, "Initial travel distance");
+         freely chosen.",
+        );
+        number_setting(
+            ui,
+            &mut settings.initial_travel_distance,
+            2,
+            20,
+            "Initial travel distance",
+        );
 
         let sep = Separator::default().spacing(12.).horizontal();
         ui.add(sep);
