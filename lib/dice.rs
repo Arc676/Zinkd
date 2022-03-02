@@ -59,20 +59,36 @@ impl WeightTransform {
         WeightTransform { matrix }
     }
 
+    pub fn matrix_product(a: &Matrix, b: &Matrix) -> Matrix {
+        let mut combined = [[c64::zero(); 6]; 6];
+        for i in 0..6 {
+            for j in 0..6 {
+                for k in 0..6 {
+                    combined[i][j] += a[i][k] * b[k][j];
+                }
+            }
+        }
+        combined
+    }
+
+    pub fn combined_with(&self, other: &WeightTransform) -> Self {
+        let matrix = WeightTransform::matrix_product(&self.matrix, &other.matrix);
+        debug_assert!(WeightTransform::is_unitary(&matrix));
+        WeightTransform { matrix }
+    }
+
     #[cfg(debug_assertions)]
-    fn is_unitary(matrix: Matrix) -> bool {
+    fn is_unitary(matrix: &Matrix) -> bool {
         let mut cc = [[c64::zero(); 6]; 6];
         for i in 0..6 {
             for j in 0..6 {
                 cc[i][j] = matrix[j][i].conj();
             }
         }
+        let product = WeightTransform::matrix_product(&matrix, &cc);
         for i in 0..6 {
             for j in 0..6 {
-                let mut term = c64::zero();
-                for k in 0..6 {
-                    term += matrix[i][k] * cc[k][j];
-                }
+                let term = product[i][j];
                 if i == j {
                     if (term - c64::one()).norm() > 1e-12 {
                         return false;
@@ -88,7 +104,7 @@ impl WeightTransform {
     }
 
     pub fn with_matrix(matrix: Matrix) -> Self {
-        debug_assert!(WeightTransform::is_unitary(matrix));
+        debug_assert!(WeightTransform::is_unitary(&matrix));
         WeightTransform { matrix }
     }
 
@@ -106,7 +122,7 @@ impl WeightTransform {
         transform.matrix[v1][v2] = b;
         transform.matrix[v2][v1] = -b;
 
-        debug_assert!(WeightTransform::is_unitary(transform.matrix));
+        debug_assert!(WeightTransform::is_unitary(&transform.matrix));
 
         transform
     }
@@ -164,5 +180,15 @@ mod tests {
         let transform = WeightTransform::superimpose_pair(1, 2, 1.);
         die.apply_transformation(&transform);
         dbg!(die.weights);
+    }
+
+    #[test]
+    fn multiple_transformations() {
+        let m1 = WeightTransform::superimpose_pair(1, 3, 1.);
+        assert!(WeightTransform::is_unitary(&m1.matrix));
+        let m2 = WeightTransform::superimpose_pair(2, 4, 1.);
+        assert!(WeightTransform::is_unitary(&m2.matrix));
+        let m3 = m1.combined_with(&m2);
+        assert!(WeightTransform::is_unitary(&m3.matrix));
     }
 }
