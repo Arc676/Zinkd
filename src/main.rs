@@ -34,7 +34,6 @@
 
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
-use dicey_dungeons::*;
 
 mod main_menu;
 mod game;

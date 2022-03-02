@@ -32,6 +32,7 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+use std::cmp::min;
 use crate::settings::GameSettings;
 use crate::AppState;
 use bevy::prelude::*;
@@ -45,6 +46,7 @@ pub fn setup_game(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     settings: Res<GameSettings>,
+    window: Res<Windows>,
 ) {
     commands
         .spawn()
@@ -56,7 +58,16 @@ pub fn setup_game(
         settings.travel_distance(),
     );
 
-    let tile_size = Vec2::splat(48.);
+    let window = window.get_primary().unwrap();
+    let width = window.width() as i32;
+    let tile_width = width / settings.map_width() as i32;
+    let height = window.height() as i32;
+    let tile_height = height / settings.map_height() as i32;
+
+    let tile_size = (min(tile_width, tile_height) / 24) * 24;
+    let tile_size = Vec2::splat(tile_size as f32);
+
+    let offset = Vec2::new(settings.map_width() as f32 / 2. - 0.5, settings.map_height() as f32 / 2. - 0.5) * tile_size;
 
     let longitudinal = asset_server.load("tiles/tile_straight.png");
     let latitudinal = asset_server.load("tiles/tile_straight_h.png");
@@ -76,7 +87,7 @@ pub fn setup_game(
             },
             GridCell::Goal => goal.clone(),
         };
-        let translation = (Vec2::new(x as f32, y as f32) * tile_size).extend(0.);
+        let translation = (Vec2::new(x as f32, y as f32) * tile_size - offset).extend(0.);
         sprites.push(SpriteBundle {
             texture,
             transform: Transform {
