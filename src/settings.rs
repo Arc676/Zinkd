@@ -55,6 +55,15 @@ impl std::fmt::Display for PlayerSprite {
     }
 }
 
+impl PlayerSprite {
+    pub fn path(&self) -> &str {
+        match self {
+            PlayerSprite::Ferris => "sprites/p1.png",
+            PlayerSprite::Darryl => "sprites/p2.png",
+        }
+    }
+}
+
 pub struct GameSettings {
     players: u32,
     player_sprites: Vec<PlayerSprite>,

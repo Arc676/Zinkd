@@ -32,6 +32,7 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+use std::slice::Iter;
 use crate::items;
 use rand::Rng;
 
@@ -192,6 +193,10 @@ impl Map {
                 .enumerate()
                 .map(move |(x, cell)| (Coordinates(x, y), cell))
         })
+    }
+    
+    pub fn starting_positions(&self) -> Iter<'_, Coordinates> {
+        self.starting_points.iter()
     }
 }
 

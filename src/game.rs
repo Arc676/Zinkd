@@ -37,6 +37,7 @@ use crate::settings::GameSettings;
 use crate::AppState;
 use bevy::prelude::*;
 use dicey_dungeons::map::*;
+use dicey_dungeons::player::Player;
 
 pub struct DungeonGame {
     map: Map,
@@ -68,6 +69,9 @@ pub fn setup_game(
     let tile_size = Vec2::splat(tile_size as f32);
 
     let offset = Vec2::new(settings.map_width() as f32 / 2. - 0.5, settings.map_height() as f32 / 2. - 0.5) * tile_size;
+    let coords_to_vec = |x: usize, y: usize, z: f32| {
+        (Vec2::new(x as f32, y as f32) * tile_size - offset).extend(z)
+    };
 
     let longitudinal = asset_server.load("tiles/tile_straight.png");
     let latitudinal = asset_server.load("tiles/tile_straight_h.png");
@@ -87,7 +91,7 @@ pub fn setup_game(
             },
             GridCell::Goal => goal.clone(),
         };
-        let translation = (Vec2::new(x as f32, y as f32) * tile_size - offset).extend(0.);
+        let translation = coords_to_vec(x, y, 0.);
         sprites.push(SpriteBundle {
             texture,
             transform: Transform {
@@ -102,6 +106,28 @@ pub fn setup_game(
         });
     }
     commands.spawn_batch(sprites);
+
+    for (sprite, spawn_pos) in settings.player_sprites_iter().zip(map.starting_positions()) {
+        let Coordinates(x, y) = spawn_pos;
+        let player = Player::spawn_at(*spawn_pos);
+
+        let texture = asset_server.load(sprite.path());
+        let translation = coords_to_vec(*x, *y, 1.);
+
+        commands.spawn_bundle(SpriteBundle {
+            texture,
+            transform: Transform {
+                translation,
+                ..Default::default()
+            },
+            sprite: Sprite {
+                custom_size: Some(tile_size / 2.),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+            .insert(player);
+    }
     let game = DungeonGame { map };
     commands.insert_resource(game);
 }

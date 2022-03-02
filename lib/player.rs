@@ -33,9 +33,11 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 use std::slice::Iter;
+use bevy::ecs::component::Component;
 use crate::items::HeldItem;
 use crate::map::Coordinates;
 
+#[derive(Component)]
 pub struct Player {
     position: Coordinates,
     inventory: Vec<HeldItem>,
