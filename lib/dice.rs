@@ -88,10 +88,27 @@ impl WeightTransform {
     }
 
     pub fn with_matrix(matrix: Matrix) -> Self {
-        if cfg!(debug_assertions) {
-            debug_assert!(WeightTransform::is_unitary(matrix));
-        }
+        debug_assert!(WeightTransform::is_unitary(matrix));
         WeightTransform { matrix }
+    }
+
+    pub fn superimpose_pair(v1: u32, v2: u32, transfer: f64) -> Self {
+        debug_assert!(transfer <= 1.);
+        debug_assert!(transfer >= 0.);
+
+        let (v1, v2) = (v1 as usize - 1, v2 as usize - 1);
+        let mut transform = WeightTransform::identity();
+        let a = c64::from((transfer / 2.).sqrt());
+        let b = c64::from(((2. - transfer) / 2.).sqrt());
+
+        transform.matrix[v1][v1] = a;
+        transform.matrix[v2][v2] = a;
+        transform.matrix[v1][v2] = b;
+        transform.matrix[v2][v1] = -b;
+
+        debug_assert!(WeightTransform::is_unitary(transform.matrix));
+
+        transform
     }
 
     pub fn apply(&self, rhs: Weights) -> Weights {
@@ -138,5 +155,14 @@ mod tests {
         ]);
         let results = generate_rolls(&die, 1000);
         dbg!(results.map(|x| x as f64 / results[0] as f64));
+    }
+
+    #[test]
+    fn superposition() {
+        let mut die = WeightedDie::fair_die();
+        // Transfer all weight from 2 to 1
+        let transform = WeightTransform::superimpose_pair(1, 2, 1.);
+        die.apply_transformation(&transform);
+        dbg!(die.weights);
     }
 }
