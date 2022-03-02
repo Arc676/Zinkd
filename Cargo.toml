@@ -6,6 +6,8 @@ edition = "2021"
 [dependencies]
 bevy = "0.6.1"
 rand = "0.8.5"
+num-complex = "0.4"
+num-traits = "0.2.14"
 
 [lib]
 name = "dicey_dungeons"
