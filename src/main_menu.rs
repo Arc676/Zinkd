@@ -49,34 +49,33 @@ const PRESSED_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 macro_rules! button_with_text {
     ($commands:ident, $assets:ident, $text:tt) => {
         $commands
-        .spawn_bundle(ButtonBundle {
-            style: Style {
-                size: Size::new(Val::Px(150.0), Val::Px(65.0)),
-                margin: Rect::all(Val::Auto),
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
+            .spawn_bundle(ButtonBundle {
+                style: Style {
+                    size: Size::new(Val::Px(150.0), Val::Px(65.0)),
+                    margin: Rect::all(Val::Auto),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    ..Default::default()
+                },
+                color: NORMAL_BUTTON.into(),
                 ..Default::default()
-            },
-            color: NORMAL_BUTTON.into(),
-            ..Default::default()
-        })
-        .with_children(|parent| {
-            parent.spawn_bundle(TextBundle {
-                text: Text::with_section(
-                    $text,
-                    TextStyle {
-                        color: Color::BLACK,
-                        font_size: 40.,
-                        font: $assets.load("fonts/FiraSans-Bold.ttf"),
-                        ..Default::default()
-                    },
-                    Default::default(),
-                ),
-                ..Default::default()
-            });
-        })
-        .id()
-    }
+            })
+            .with_children(|parent| {
+                parent.spawn_bundle(TextBundle {
+                    text: Text::with_section(
+                        $text,
+                        TextStyle {
+                            color: Color::BLACK,
+                            font_size: 40.,
+                            font: $assets.load("fonts/FiraSans-Bold.ttf"),
+                        },
+                        Default::default(),
+                    ),
+                    ..Default::default()
+                });
+            })
+            .id()
+    };
 }
 
 pub fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -91,12 +90,11 @@ pub fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
     });
 }
 
+type ColoredButton<'a> = (Entity, &'a Interaction, &'a mut UiColor);
+type ButtonFilter = (Changed<Interaction>, With<Button>);
 pub fn main_menu(
     mut state: ResMut<State<AppState>>,
-    mut interaction_query: Query<
-        (Entity, &Interaction, &mut UiColor),
-        (Changed<Interaction>, With<Button>),
-    >,
+    mut interaction_query: Query<ColoredButton, ButtonFilter>,
     mut app_exit_events: EventWriter<AppExit>,
     menu: Res<MainMenu>,
 ) {

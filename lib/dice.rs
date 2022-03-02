@@ -87,12 +87,14 @@ impl WeightedDie {
 impl WeightTransform {
     pub fn identity() -> Self {
         let mut matrix = [[c64::zero(); 6]; 6];
+        #[allow(clippy::needless_range_loop)]
         for i in 0..6 {
             matrix[i][i] = c64::one();
         }
         WeightTransform { matrix }
     }
 
+    #[allow(clippy::needless_range_loop)]
     pub fn matrix_product(a: &Matrix, b: &Matrix) -> Matrix {
         let mut combined = [[c64::zero(); 6]; 6];
         for i in 0..6 {
@@ -112,6 +114,7 @@ impl WeightTransform {
     }
 
     #[cfg(debug_assertions)]
+    #[allow(clippy::needless_range_loop)]
     fn is_unitary(matrix: &Matrix) -> bool {
         let mut cc = [[c64::zero(); 6]; 6];
         for i in 0..6 {
@@ -119,7 +122,7 @@ impl WeightTransform {
                 cc[i][j] = matrix[j][i].conj();
             }
         }
-        let product = WeightTransform::matrix_product(&matrix, &cc);
+        let product = WeightTransform::matrix_product(matrix, &cc);
         for i in 0..6 {
             for j in 0..6 {
                 let term = product[i][j];
@@ -127,10 +130,8 @@ impl WeightTransform {
                     if (term - c64::one()).norm() > 1e-12 {
                         return false;
                     }
-                } else {
-                    if term.norm() > 1e-12 {
-                        return false;
-                    }
+                } else if term.norm() > 1e-12 {
+                    return false;
                 }
             }
         }
@@ -161,6 +162,7 @@ impl WeightTransform {
         transform
     }
 
+    #[allow(clippy::needless_range_loop)]
     pub fn apply(&self, rhs: Weights) -> Weights {
         let mut res = [c64::zero(); 6];
         for i in 0..6 {

@@ -34,7 +34,7 @@
 
 use crate::AppState;
 use bevy::prelude::*;
-use bevy_egui::{egui, EguiContext, EguiPlugin};
+use bevy_egui::{egui, EguiContext};
 use bevy_egui::egui::{Separator, Slider, Ui};
 
 pub struct GameSettings {
