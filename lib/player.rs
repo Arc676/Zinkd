@@ -32,7 +32,32 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-pub mod dice;
-pub mod map;
-pub mod items;
-pub mod player;
+use std::slice::Iter;
+use crate::items::HeldItem;
+use crate::map::Coordinates;
+
+pub struct Player {
+    position: Coordinates,
+    inventory: Vec<HeldItem>,
+}
+
+impl Player {
+    pub fn spawn_at(position: Coordinates) -> Self {
+        Player {
+            position,
+            inventory: vec![],
+        }
+    }
+
+    pub fn pick_up(&mut self, item: HeldItem) {
+        self.inventory.push(item);
+    }
+
+    pub fn position(&self) -> Coordinates {
+        self.position
+    }
+
+    pub fn items(&self) -> Iter<'_, HeldItem> {
+        self.inventory.iter()
+    }
+}
