@@ -32,14 +32,32 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+use std::fmt::Formatter;
+use std::slice::Iter;
 use crate::AppState;
 use bevy::prelude::*;
 use bevy_egui::egui::emath::Numeric;
 use bevy_egui::egui::{Separator, Slider, Ui};
 use bevy_egui::{egui, EguiContext};
 
+#[derive(Copy, Clone, PartialEq)]
+pub enum PlayerSprite {
+    Ferris,
+    Darryl,
+}
+
+impl std::fmt::Display for PlayerSprite {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            PlayerSprite::Ferris => "Ferris",
+            PlayerSprite::Darryl => "Darryl",
+        })
+    }
+}
+
 pub struct GameSettings {
     players: u32,
+    player_sprites: Vec<PlayerSprite>,
     map_width: usize,
     map_height: usize,
     initial_travel_distance: usize,
@@ -49,6 +67,7 @@ impl Default for GameSettings {
     fn default() -> Self {
         GameSettings {
             players: 2,
+            player_sprites: vec![PlayerSprite::Ferris, PlayerSprite::Darryl],
             map_width: 10,
             map_height: 10,
             initial_travel_distance: 5,
@@ -65,6 +84,10 @@ impl GameSettings {
         self.players
     }
 
+    pub fn player_sprites_iter(&self) -> Iter<'_, PlayerSprite> {
+        self.player_sprites.iter()
+    }
+
     pub fn map_width(&self) -> usize {
         self.map_width
     }
@@ -79,8 +102,8 @@ impl GameSettings {
 }
 
 fn number_setting<T>(ui: &mut Ui, num: &mut T, min: T, max: T, lbl: &str)
-where
-    T: Numeric,
+    where
+        T: Numeric,
 {
     ui.label(lbl);
     let slider = Slider::new(num, min..=max);
@@ -96,6 +119,21 @@ pub fn settings_ui(
         ui.heading("Dicey Dungeons: Settings");
 
         number_setting(ui, &mut settings.players, 2, 6, "Number of players");
+        let size = settings.players as usize;
+        if size > settings.player_sprites.len() {
+            settings.player_sprites.resize(size, PlayerSprite::Ferris);
+        }
+
+        for i in 0..settings.players {
+            let sprite = &mut settings.player_sprites[i as usize];
+            egui::ComboBox::from_label(format!("Player {} sprite", i + 1))
+                .selected_text(sprite.to_string())
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(sprite, PlayerSprite::Ferris, PlayerSprite::Ferris.to_string());
+                    ui.selectable_value(sprite, PlayerSprite::Darryl, PlayerSprite::Darryl.to_string());
+                });
+        }
+
         number_setting(ui, &mut settings.map_width, 5, 20, "Map width");
         number_setting(ui, &mut settings.map_height, 5, 20, "Map height");
 
