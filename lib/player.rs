@@ -34,6 +34,7 @@
 
 use std::slice::Iter;
 use bevy::ecs::component::Component;
+use crate::dice::WeightedDie;
 use crate::items::HeldItem;
 use crate::map::Coordinates;
 
@@ -41,6 +42,7 @@ use crate::map::Coordinates;
 pub struct Player {
     position: Coordinates,
     inventory: Vec<HeldItem>,
+    die: WeightedDie,
 }
 
 impl Player {
@@ -48,6 +50,7 @@ impl Player {
         Player {
             position,
             inventory: vec![],
+            die: WeightedDie::fair_die(),
         }
     }
 
@@ -61,5 +64,9 @@ impl Player {
 
     pub fn items(&self) -> Iter<'_, HeldItem> {
         self.inventory.iter()
+    }
+
+    pub fn roll(&self) -> u32 {
+        self.die.roll()
     }
 }
