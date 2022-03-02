@@ -1,3 +1,37 @@
+// MIT/Apache 2.0 dual license
+// Apache 2.0
+// Copyright 2022 Arc676/Alessandro Vinciguerra <alesvinciguerra@gmail.com>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// MIT
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the "Software"),
+// to deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+// sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+// FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+// COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+// IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+// CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 use num_complex::Complex64 as c64;
 use num_traits::identities::{One, Zero};
 use rand::Rng;
@@ -53,12 +87,14 @@ impl WeightedDie {
 impl WeightTransform {
     pub fn identity() -> Self {
         let mut matrix = [[c64::zero(); 6]; 6];
+        #[allow(clippy::needless_range_loop)]
         for i in 0..6 {
             matrix[i][i] = c64::one();
         }
         WeightTransform { matrix }
     }
 
+    #[allow(clippy::needless_range_loop)]
     pub fn matrix_product(a: &Matrix, b: &Matrix) -> Matrix {
         let mut combined = [[c64::zero(); 6]; 6];
         for i in 0..6 {
@@ -78,6 +114,7 @@ impl WeightTransform {
     }
 
     #[cfg(debug_assertions)]
+    #[allow(clippy::needless_range_loop)]
     fn is_unitary(matrix: &Matrix) -> bool {
         let mut cc = [[c64::zero(); 6]; 6];
         for i in 0..6 {
@@ -85,7 +122,7 @@ impl WeightTransform {
                 cc[i][j] = matrix[j][i].conj();
             }
         }
-        let product = WeightTransform::matrix_product(&matrix, &cc);
+        let product = WeightTransform::matrix_product(matrix, &cc);
         for i in 0..6 {
             for j in 0..6 {
                 let term = product[i][j];
@@ -93,10 +130,8 @@ impl WeightTransform {
                     if (term - c64::one()).norm() > 1e-12 {
                         return false;
                     }
-                } else {
-                    if term.norm() > 1e-12 {
-                        return false;
-                    }
+                } else if term.norm() > 1e-12 {
+                    return false;
                 }
             }
         }
@@ -127,6 +162,7 @@ impl WeightTransform {
         transform
     }
 
+    #[allow(clippy::needless_range_loop)]
     pub fn apply(&self, rhs: Weights) -> Weights {
         let mut res = [c64::zero(); 6];
         for i in 0..6 {
