@@ -59,6 +59,22 @@ impl GameSettings {
     pub fn reset_settings(&mut self) {
         *self = GameSettings::default();
     }
+
+    pub fn players(&self) -> u32 {
+        self.players
+    }
+
+    pub fn map_width(&self) -> u32 {
+        self.map_width
+    }
+
+    pub fn map_height(&self) -> u32 {
+        self.map_height
+    }
+
+    pub fn travel_distance(&self) -> u32 {
+        self.initial_travel_distance
+    }
 }
 
 fn number_setting(ui: &mut Ui, num: &mut u32, min: u32, max: u32, lbl: &str) {
