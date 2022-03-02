@@ -36,8 +36,14 @@ use std::cmp::min;
 use crate::settings::GameSettings;
 use crate::AppState;
 use bevy::prelude::*;
+use bevy_egui::{egui, EguiContext};
 use dicey_dungeons::map::*;
 use dicey_dungeons::player::Player;
+
+#[derive(Default)]
+pub struct GameState {
+    paused: bool,
+}
 
 pub fn setup_game(
     mut commands: Commands,
@@ -125,9 +131,28 @@ pub fn setup_game(
             .insert(player);
     }
     commands.insert_resource(map);
+    commands.insert_resource(GameState::default());
 }
 
-pub fn update_game(mut state: ResMut<State<AppState>>) {
+pub fn update_game(mut game_state: ResMut<GameState>, keyboard: Res<Input<KeyCode>>) {
+    if keyboard.just_released(KeyCode::Escape) {
+        game_state.paused = !game_state.paused;
+    }
+}
+
+pub fn pause_menu(
+    mut egui_context: ResMut<EguiContext>,
+    mut state: ResMut<State<AppState>>,
+    game_state: Res<GameState>,
+) {
+    if !game_state.paused {
+        return;
+    }
+    egui::Window::new("Pause").show(egui_context.ctx_mut(), |ui| {
+        if ui.button("Back to Main").clicked() {
+            state.set(AppState::MainMenu).unwrap();
+        }
+    });
 }
 
 pub fn cleanup_game(mut commands: Commands) {

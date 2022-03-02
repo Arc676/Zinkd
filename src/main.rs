@@ -57,6 +57,7 @@ fn main() {
         .add_system_set(SystemSet::on_exit(AppState::MainMenu).with_system(main_menu::cleanup_menu))
         .add_system_set(SystemSet::on_enter(AppState::Game).with_system(game::setup_game))
         .add_system_set(SystemSet::on_update(AppState::Game).with_system(game::update_game))
+        .add_system_set(SystemSet::on_update(AppState::Game).with_system(game::pause_menu))
         .add_system_set(SystemSet::on_exit(AppState::Game).with_system(game::cleanup_game))
         .add_system_set(SystemSet::on_update(AppState::Settings).with_system(settings::settings_ui))
         .run();
