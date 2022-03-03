@@ -45,6 +45,16 @@ pub const WEST: u8 = 1 << 3;
 pub const LATITUDINAL: u8 = EAST | WEST;
 pub const OMNIDIRECTIONAL: u8 = LONGITUDINAL | LATITUDINAL;
 
+pub fn directions_are_opposite(a: Direction, b: Direction) -> bool {
+    match a {
+        NORTH => b == SOUTH,
+        SOUTH => b == NORTH,
+        EAST => b == WEST,
+        WEST => b == EAST,
+        _ => panic!("Unknown direction"),
+    }
+}
+
 pub enum GridCell {
     Wall,
     Path(Direction, items::PossibleItem),

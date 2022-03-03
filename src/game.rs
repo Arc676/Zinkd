@@ -36,6 +36,7 @@ use crate::settings::GameSettings;
 use crate::AppState;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContext};
+use dicey_dungeons::map::Direction;
 use dicey_dungeons::map::*;
 use dicey_dungeons::player::Player;
 use std::cmp::min;
@@ -43,7 +44,8 @@ use std::cmp::min;
 enum GameAction {
     WaitForInput,
     UsingItem,
-    Moving,
+    Moving(Direction, u32),
+    HasMoved,
 }
 
 impl Default for GameAction {
@@ -66,6 +68,8 @@ enum Control {
     Roll,
     Inventory,
     UseItem(usize),
+    Move(Direction),
+    EndTurn,
 }
 
 pub fn setup_game(
@@ -190,10 +194,25 @@ fn get_control(keyboard: &Res<Input<KeyCode>>) -> Option<Control> {
     if keyboard.just_released(KeyCode::I) {
         return Some(Control::Inventory);
     }
+    if keyboard.just_released(KeyCode::W) {
+        return Some(Control::Move(NORTH));
+    }
+    if keyboard.just_released(KeyCode::A) {
+        return Some(Control::Move(WEST));
+    }
+    if keyboard.just_released(KeyCode::S) {
+        return Some(Control::Move(SOUTH));
+    }
+    if keyboard.just_released(KeyCode::D) {
+        return Some(Control::Move(EAST));
+    }
+    if keyboard.just_released(KeyCode::Return) {
+        return Some(Control::EndTurn);
+    }
     None
 }
 
-fn end_turn(mut game_state: ResMut<GameState>) {
+fn end_turn(game_state: &mut ResMut<GameState>) {
     game_state.rolled_value = None;
     game_state.inventory_visible = false;
     game_state.active_player = (game_state.active_player + 1) % game_state.player_count;
@@ -222,22 +241,55 @@ pub fn update_game(
     if keyboard.just_released(KeyCode::Escape) {
         game_state.paused = !game_state.paused;
     }
-    for player in query.iter_mut() {
+    for mut player in query.iter_mut() {
         if game_state.active_player == player.player_number() {
             match game_state.current_action {
                 GameAction::WaitForInput => {
                     if let Some(action) = get_control(&keyboard) {
                         match action {
-                            Control::Roll => game_state.rolled_value = Some(player.roll()),
+                            Control::Roll => {
+                                let rolled = player.roll();
+                                game_state.rolled_value = Some(rolled);
+                                game_state.current_action = GameAction::Moving(0, rolled);
+                            }
                             Control::Inventory => {
                                 game_state.inventory_visible = !game_state.inventory_visible
                             }
-                            Control::UseItem(_) => {}
+                            _ => (),
                         }
                     }
                 }
                 GameAction::UsingItem => {}
-                GameAction::Moving => {}
+                GameAction::Moving(direction, remaining) => {
+                    if let Some(action) = get_control(&keyboard) {
+                        if let Control::Move(step) = action {
+                            player.step(step);
+                            let mut step_count = remaining;
+                            if directions_are_opposite(step, direction) {
+                                step_count += 1;
+                            } else {
+                                step_count -= 1;
+                            }
+                            if step_count == 0 {
+                                game_state.current_action = GameAction::HasMoved;
+                            } else {
+                                game_state.current_action = GameAction::Moving(step, step_count);
+                            }
+                        }
+                    }
+                }
+                GameAction::HasMoved => {
+                    if let Some(action) = get_control(&keyboard) {
+                        match action {
+                            Control::UseItem(_) => {}
+                            Control::Inventory => {
+                                game_state.inventory_visible = !game_state.inventory_visible
+                            }
+                            Control::EndTurn => end_turn(&mut game_state),
+                            _ => (),
+                        }
+                    }
+                }
             }
         }
     }
