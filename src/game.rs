@@ -43,6 +43,7 @@ use std::cmp::min;
 #[derive(Default)]
 pub struct GameState {
     paused: bool,
+    active_player: u32,
 }
 
 pub fn setup_game(
@@ -111,9 +112,13 @@ pub fn setup_game(
     }
     commands.spawn_batch(sprites);
 
-    for (sprite, spawn_pos) in settings.player_sprites_iter().zip(map.starting_positions()) {
+    for (num, (sprite, spawn_pos)) in settings
+        .player_sprites_iter()
+        .zip(map.starting_positions())
+        .enumerate()
+    {
         let Coordinates(x, y) = spawn_pos;
-        let player = Player::spawn_at(*spawn_pos);
+        let player = Player::spawn_at(*spawn_pos, num as u32);
 
         let texture = asset_server.load(sprite.path());
         let translation = coords_to_vec(*x, *y, 1.);

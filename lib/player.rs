@@ -32,26 +32,32 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-use std::slice::Iter;
-use bevy::ecs::component::Component;
 use crate::dice::WeightedDie;
 use crate::items::HeldItem;
 use crate::map::Coordinates;
+use bevy::ecs::component::Component;
+use std::slice::Iter;
 
 #[derive(Component)]
 pub struct Player {
     position: Coordinates,
     inventory: Vec<HeldItem>,
     die: WeightedDie,
+    player_number: u32,
 }
 
 impl Player {
-    pub fn spawn_at(position: Coordinates) -> Self {
+    pub fn spawn_at(position: Coordinates, player_number: u32) -> Self {
         Player {
             position,
             inventory: vec![],
             die: WeightedDie::fair_die(),
+            player_number,
         }
+    }
+
+    pub fn player_number(&self) -> u32 {
+        self.player_number
     }
 
     pub fn pick_up(&mut self, item: HeldItem) {
