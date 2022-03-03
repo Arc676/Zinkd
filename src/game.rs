@@ -380,7 +380,7 @@ pub fn inventory_view(
     }
     let player = get_active_player(game_state.active_player, &query);
     egui::Window::new("Inventory").show(egui_context.ctx_mut(), |ui| {
-        if !player.has_items() {
+        if player.inventory_empty() {
             ui.label("No items");
             return;
         }
