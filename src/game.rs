@@ -200,7 +200,7 @@ fn get_control(keyboard: &Res<Input<KeyCode>>) -> Option<Control> {
     if keyboard.just_released(KeyCode::R) {
         return Some(Control::Roll);
     }
-    if keyboard.just_released(KeyCode::I) {
+    if keyboard.just_released(KeyCode::E) {
         return Some(Control::Inventory);
     }
     if keyboard.just_released(KeyCode::W) {
@@ -343,7 +343,7 @@ pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>
         match game_state.current_action {
             GameAction::WaitForInput => {
                 ui.label("Press R to roll");
-                ui.label("Press I to view your inventory");
+                ui.label("Press E to view your inventory");
             }
             GameAction::UsingItem => {}
             GameAction::Moving(_, remaining) => {
@@ -354,6 +354,7 @@ pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>
                 if game_state.winners.contains(&game_state.active_player) {
                     ui.label("You have reached the goal!");
                 }
+                ui.label("Press E to view your inventory.");
                 ui.label("Press Enter to end your turn.");
             }
         }
