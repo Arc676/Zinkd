@@ -32,11 +32,11 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-use std::slice::Iter;
 use crate::items;
 use rand::Rng;
+use std::slice::Iter;
 
-type Direction = u8;
+pub type Direction = u8;
 pub const NORTH: u8 = 1 << 0;
 pub const SOUTH: u8 = 1 << 1;
 pub const LONGITUDINAL: u8 = NORTH | SOUTH;
@@ -53,6 +53,18 @@ pub enum GridCell {
 
 #[derive(Copy, Clone)]
 pub struct Coordinates(pub usize, pub usize);
+
+impl Coordinates {
+    pub fn step(&mut self, direction: Direction) {
+        match direction {
+            NORTH => self.1 -= 1,
+            SOUTH => self.1 += 1,
+            EAST => self.0 += 1,
+            WEST => self.0 -= 1,
+            _ => panic!("Cannot move in this direction"),
+        }
+    }
+}
 
 type Grid = Vec<Vec<GridCell>>;
 pub struct Map {
@@ -194,7 +206,7 @@ impl Map {
                 .map(move |(x, cell)| (Coordinates(x, y), cell))
         })
     }
-    
+
     pub fn starting_positions(&self) -> Iter<'_, Coordinates> {
         self.starting_points.iter()
     }

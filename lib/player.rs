@@ -34,7 +34,7 @@
 
 use crate::dice::WeightedDie;
 use crate::items::HeldItem;
-use crate::map::Coordinates;
+use crate::map::{Coordinates, Direction};
 use bevy::ecs::component::Component;
 use std::slice::Iter;
 
@@ -66,6 +66,10 @@ impl Player {
 
     pub fn position(&self) -> Coordinates {
         self.position
+    }
+
+    pub fn step(&mut self, direction: Direction) {
+        self.position.step(direction);
     }
 
     pub fn items(&self) -> Iter<'_, HeldItem> {
