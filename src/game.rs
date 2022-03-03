@@ -361,6 +361,39 @@ pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>
     });
 }
 
+fn get_active_player<'a>(active_player: u32, query: &'a Query<&Player>) -> &'a Player {
+    for player in query.iter() {
+        if player.player_number() == active_player {
+            return player;
+        }
+    }
+    panic!("No active player");
+}
+
+pub fn inventory_view(
+    mut egui_context: ResMut<EguiContext>,
+    query: Query<&Player>,
+    game_state: Res<GameState>,
+) {
+    if !game_state.inventory_visible {
+        return;
+    }
+    let player = get_active_player(game_state.active_player, &query);
+    egui::Window::new("Inventory").show(egui_context.ctx_mut(), |ui| {
+        if !player.has_items() {
+            ui.label("No items");
+            return;
+        }
+        for (i, item) in player.items().enumerate() {
+            ui.horizontal(|ui| {
+                ui.label(item.short_description())
+                    .on_hover_text(item.full_description());
+                if ui.button("Use item").clicked() {}
+            });
+        }
+    });
+}
+
 pub fn pause_menu(
     mut egui_context: ResMut<EguiContext>,
     mut state: ResMut<State<AppState>>,

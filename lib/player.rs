@@ -82,6 +82,10 @@ impl Player {
         }
     }
 
+    pub fn has_items(&self) -> bool {
+        !self.inventory.is_empty()
+    }
+
     pub fn items(&self) -> Iter<'_, HeldItem> {
         self.inventory.iter()
     }
