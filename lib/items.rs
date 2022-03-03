@@ -32,8 +32,55 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+use crate::dice::{WeightTransform, WeightedDie};
+use crate::player::Player;
+
 pub type HeldItem = Box<dyn Item>;
 pub type PossibleItem = Option<HeldItem>;
 
 pub trait Item: Send + Sync {
+    fn short_description(&self) -> &str;
+    fn full_description(&self) -> &str;
+    fn use_item(&self, player: &mut Player, die: &mut WeightedDie);
+}
+
+pub enum ItemType {
+    WeightTransfer,
+    DoubleWeightTransfer,
+    WeightTransferPair,
+}
+
+pub struct WeightTransfer {
+    transform: WeightTransform,
+    short: String,
+    full: String,
+}
+
+impl WeightTransfer {
+    pub fn new(from: u32, to: u32, strength: f64) -> Self {
+        WeightTransfer {
+            transform: WeightTransform::superimpose_pair(to, from, strength),
+            short: format!("Weight transfer {} > {}", from, to),
+            full: format!(
+                "Changes the weights on {1}, {2} to a weighted average favoring {2} at {0:0}%",
+                strength * 100.,
+                from,
+                to
+            ),
+        }
+    }
+}
+
+impl Item for WeightTransfer {
+    fn short_description(&self) -> &str {
+        &self.short
+    }
+
+    fn full_description(&self) -> &str {
+        &self.full
+    }
+
+    fn use_item(&self, _player: &mut Player, die: &mut WeightedDie) {
+        die.apply_transformation(&self.transform);
+    }
 }
