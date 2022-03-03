@@ -73,6 +73,7 @@ pub fn setup_game(
     asset_server: Res<AssetServer>,
     settings: Res<GameSettings>,
     window: Res<Windows>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
     commands
         .spawn()
@@ -161,13 +162,28 @@ pub fn setup_game(
             .insert(player);
     }
     commands.insert_resource(map);
+
+    let texture = asset_server.load("sprites/DieFaces.png");
+    let texture_atlas = TextureAtlas::from_grid(texture, Vec2::splat(32.), 6, 1);
+    let texture_atlas = texture_atlases.add(texture_atlas);
+    let translation = Vec2::new(-width as f32 / 2. + 20., height as f32 / 2. - 20.).extend(0.);
+    commands.spawn_bundle(SpriteSheetBundle {
+        texture_atlas,
+        transform: Transform {
+            translation,
+            ..Default::default()
+        },
+        visibility: Visibility { is_visible: false },
+        ..Default::default()
+    });
+
     commands.insert_resource(GameState {
         player_count: settings.players(),
         ..Default::default()
     });
 }
 
-fn get_control(keyboard: Res<Input<KeyCode>>) -> Option<Control> {
+fn get_control(keyboard: &Res<Input<KeyCode>>) -> Option<Control> {
     if keyboard.just_released(KeyCode::R) {
         return Some(Control::Roll);
     }
@@ -183,29 +199,46 @@ fn end_turn(mut game_state: ResMut<GameState>) {
     game_state.active_player = (game_state.active_player + 1) % game_state.player_count;
 }
 
+pub fn update_die(
+    game_state: Res<GameState>,
+    mut query: Query<(&mut Visibility, &mut TextureAtlasSprite)>,
+) {
+    for (mut visibility, mut sprite) in query.iter_mut() {
+        match game_state.rolled_value {
+            None => visibility.is_visible = false,
+            Some(value) => {
+                visibility.is_visible = true;
+                sprite.index = value as usize - 1;
+            }
+        }
+    }
+}
+
 pub fn update_game(
     mut game_state: ResMut<GameState>,
     keyboard: Res<Input<KeyCode>>,
-    player: ResMut<Player>,
+    mut query: Query<&mut Player>,
 ) {
     if keyboard.just_released(KeyCode::Escape) {
         game_state.paused = !game_state.paused;
     }
-    if game_state.active_player == player.player_number() {
-        match game_state.current_action {
-            GameAction::WaitForInput => {
-                if let Some(action) = get_control(keyboard) {
-                    match action {
-                        Control::Roll => game_state.rolled_value = Some(player.roll()),
-                        Control::Inventory => {
-                            game_state.inventory_visible = !game_state.inventory_visible
+    for player in query.iter_mut() {
+        if game_state.active_player == player.player_number() {
+            match game_state.current_action {
+                GameAction::WaitForInput => {
+                    if let Some(action) = get_control(&keyboard) {
+                        match action {
+                            Control::Roll => game_state.rolled_value = Some(player.roll()),
+                            Control::Inventory => {
+                                game_state.inventory_visible = !game_state.inventory_visible
+                            }
+                            Control::UseItem(_) => {}
                         }
-                        Control::UseItem(_) => {}
                     }
                 }
+                GameAction::UsingItem => {}
+                GameAction::Moving => {}
             }
-            GameAction::UsingItem => {}
-            GameAction::Moving => {}
         }
     }
 }
