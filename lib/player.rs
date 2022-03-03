@@ -70,7 +70,9 @@ impl Player {
 
     pub fn step(&mut self, direction: Direction, map: &Map) -> bool {
         let mut current = self.position;
-        current.step(direction);
+        if !current.step(direction, map.width(), map.height()) {
+            return false;
+        }
         match map.cell_at(current) {
             GridCell::Wall => false,
             _ => {

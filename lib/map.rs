@@ -65,14 +65,35 @@ pub enum GridCell {
 pub struct Coordinates(pub usize, pub usize);
 
 impl Coordinates {
-    pub fn step(&mut self, direction: Direction) {
+    pub fn step(&mut self, direction: Direction, width: usize, height: usize) -> bool {
         match direction {
-            NORTH => self.1 += 1,
-            SOUTH => self.1 -= 1,
-            EAST => self.0 += 1,
-            WEST => self.0 -= 1,
+            NORTH => {
+                if self.1 >= height - 1 {
+                    return false;
+                }
+                self.1 += 1
+            }
+            SOUTH => {
+                if self.1 == 0 {
+                    return false;
+                }
+                self.1 -= 1
+            }
+            EAST => {
+                if self.0 >= width - 1 {
+                    return false;
+                }
+                self.0 += 1
+            }
+            WEST => {
+                if self.0 == 0 {
+                    return false;
+                }
+                self.0 -= 1
+            }
             _ => panic!("Cannot move in this direction"),
         }
+        true
     }
 }
 
@@ -136,11 +157,11 @@ impl Map {
         }
     }
 
-    fn width(&self) -> usize {
+    pub fn width(&self) -> usize {
         self.grid[0].len()
     }
 
-    fn height(&self) -> usize {
+    pub fn height(&self) -> usize {
         self.grid.len()
     }
 
