@@ -312,7 +312,8 @@ pub fn update_game(
                                 game_state.inventory_visible = !game_state.inventory_visible
                             }
                             Control::EndTurn => {
-                                if game_state.winners.len() == game_state.player_count as usize {
+                                if game_state.winners.len() == game_state.player_count as usize - 1
+                                {
                                     game_state.game_over = true;
                                 } else {
                                     end_turn(&mut game_state)
@@ -372,9 +373,9 @@ pub fn pause_menu(
     }
 }
 
-pub fn cleanup_game(mut commands: Commands, sprite_query: Query<Entity, With<Sprite>>) {
+pub fn cleanup_game(mut commands: Commands, query: Query<Entity, With<Transform>>) {
     commands.remove_resource::<Map>();
-    for sprite in sprite_query.iter() {
-        commands.entity(sprite).despawn();
+    for entity in query.iter() {
+        commands.entity(entity).despawn();
     }
 }
