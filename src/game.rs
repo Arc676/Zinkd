@@ -361,8 +361,8 @@ pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>
     });
 }
 
-fn get_active_player<'a>(active_player: u32, query: &'a Query<&Player>) -> &'a Player {
-    for player in query.iter() {
+fn get_active_player<'a>(active_player: u32, query: &'a mut Query<&mut Player>) -> Mut<'a, Player> {
+    for player in query.iter_mut() {
         if player.player_number() == active_player {
             return player;
         }
@@ -372,24 +372,30 @@ fn get_active_player<'a>(active_player: u32, query: &'a Query<&Player>) -> &'a P
 
 pub fn inventory_view(
     mut egui_context: ResMut<EguiContext>,
-    query: Query<&Player>,
+    mut query: Query<&mut Player>,
     game_state: Res<GameState>,
 ) {
     if !game_state.inventory_visible {
         return;
     }
-    let player = get_active_player(game_state.active_player, &query);
+    let mut player = get_active_player(game_state.active_player, &mut query);
     egui::Window::new("Inventory").show(egui_context.ctx_mut(), |ui| {
         if player.inventory_empty() {
             ui.label("No items");
             return;
         }
+        let mut used = None;
         for (i, item) in player.items().enumerate() {
             ui.horizontal(|ui| {
                 ui.label(item.short_description())
                     .on_hover_text(item.full_description());
-                if ui.button("Use item").clicked() {}
+                if ui.button("Use item").clicked() {
+                    used = Some(i);
+                }
             });
+        }
+        if let Some(index) = used {
+            player.use_item(index);
         }
     });
 }

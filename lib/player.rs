@@ -90,6 +90,10 @@ impl Player {
         self.inventory.iter()
     }
 
+    pub fn use_item(&mut self, index: usize) {
+        debug_assert!(index < self.inventory.len());
+    }
+
     pub fn roll(&self) -> u32 {
         self.die.roll()
     }
