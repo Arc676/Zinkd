@@ -66,7 +66,7 @@ pub struct GameState {
     active_player: u32,
     current_action: GameAction,
     inventory_visible: bool,
-    picked_up_item: bool,
+    picked_up_item: Option<String>,
     rolled_value: Option<u32>,
     winners: Vec<u32>,
     game_over: bool,
@@ -289,8 +289,10 @@ pub fn update_game(
                                 .extend(1.);
                             match map.cell_at_mut(position) {
                                 GridCell::Path(_, item) if item.is_some() => {
-                                    game_state.picked_up_item = true;
-                                    player.pick_up(item.take().unwrap());
+                                    let item = item.take().unwrap();
+                                    game_state.picked_up_item =
+                                        Some(item.short_description().to_string());
+                                    player.pick_up(item);
                                 }
                                 GridCell::Goal => {
                                     game_state.winners.push(player.player_number());
@@ -353,16 +355,16 @@ pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>
             GameAction::Moving(_, remaining) => {
                 ui.label("Use WASD to move");
                 ui.label(format!("{} steps remaining", remaining));
-                if game_state.picked_up_item {
-                    ui.label("You picked up an item!");
+                if let Some(description) = &game_state.picked_up_item {
+                    ui.label(format!("You picked up an item: {}", description));
                 }
             }
             GameAction::HasMoved => {
                 if game_state.winners.contains(&game_state.active_player) {
                     ui.label("You have reached the goal!");
                 } else {
-                    if game_state.picked_up_item {
-                        ui.label("You picked up an item!");
+                    if let Some(description) = &game_state.picked_up_item {
+                        ui.label(format!("You picked up an item: {}", description));
                     }
                     ui.label("Press E to view your inventory.");
                 }
