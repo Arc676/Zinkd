@@ -155,6 +155,9 @@ pub fn pause_menu(
     });
 }
 
-pub fn cleanup_game(mut commands: Commands) {
-    commands.remove_resource::<Map>()
+pub fn cleanup_game(mut commands: Commands, sprite_query: Query<(Entity), With<Sprite>>) {
+    commands.remove_resource::<Map>();
+    for sprite in sprite_query.iter() {
+        commands.entity(sprite).despawn();
+    }
 }
