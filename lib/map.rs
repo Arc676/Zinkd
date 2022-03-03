@@ -220,6 +220,11 @@ impl Map {
     pub fn starting_positions(&self) -> Iter<'_, Coordinates> {
         self.starting_points.iter()
     }
+
+    pub fn cell_at(&self, coordinates: Coordinates) -> &GridCell {
+        let Coordinates(x, y) = coordinates;
+        &self.grid[y][x]
+    }
 }
 
 #[cfg(test)]

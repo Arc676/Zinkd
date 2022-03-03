@@ -244,6 +244,7 @@ pub fn update_game(
     mut game_state: ResMut<GameState>,
     keyboard: Res<Input<KeyCode>>,
     scaling: Res<ScalingData>,
+    map: Res<Map>,
     mut query: Query<(&mut Player, &mut Transform)>,
 ) {
     if keyboard.just_released(KeyCode::Escape) {
@@ -269,23 +270,19 @@ pub fn update_game(
                 }
                 GameAction::UsingItem => {}
                 GameAction::Moving(direction, remaining) => {
-                    if let Some(action) = get_control(&keyboard) {
-                        if let Control::Move(step) = action {
-                            if !directions_are_opposite(step, direction) {
-                                player.step(step);
-                                let Coordinates(x, y) = player.position();
-                                transform.translation = (Vec2::new(x as f32, y as f32)
-                                    * scaling.tile_size
-                                    - scaling.offset)
-                                    .extend(1.);
-                                let mut step_count = remaining;
-                                step_count -= 1;
-                                if step_count == 0 {
-                                    game_state.current_action = GameAction::HasMoved;
-                                } else {
-                                    game_state.current_action =
-                                        GameAction::Moving(step, step_count);
-                                }
+                    if let Some(Control::Move(step)) = get_control(&keyboard) {
+                        if !directions_are_opposite(step, direction) && player.step(step, &map) {
+                            let Coordinates(x, y) = player.position();
+                            transform.translation = (Vec2::new(x as f32, y as f32)
+                                * scaling.tile_size
+                                - scaling.offset)
+                                .extend(1.);
+                            let mut step_count = remaining;
+                            step_count -= 1;
+                            if step_count == 0 {
+                                game_state.current_action = GameAction::HasMoved;
+                            } else {
+                                game_state.current_action = GameAction::Moving(step, step_count);
                             }
                         }
                     }
