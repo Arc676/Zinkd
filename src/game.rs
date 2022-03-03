@@ -66,6 +66,7 @@ pub struct GameState {
     active_player: u32,
     current_action: GameAction,
     inventory_visible: bool,
+    picked_up_item: bool,
     rolled_value: Option<u32>,
     winners: Vec<u32>,
     game_over: bool,
@@ -252,7 +253,7 @@ pub fn update_game(
     mut game_state: ResMut<GameState>,
     keyboard: Res<Input<KeyCode>>,
     scaling: Res<ScalingData>,
-    map: Res<Map>,
+    mut map: ResMut<Map>,
     mut query: Query<(&mut Player, &mut Transform)>,
 ) {
     if keyboard.just_released(KeyCode::Escape) {
@@ -286,8 +287,11 @@ pub fn update_game(
                                 * scaling.tile_size
                                 - scaling.offset)
                                 .extend(1.);
-                            match map.cell_at(position) {
-                                GridCell::Path(_, _) => {}
+                            match map.cell_at_mut(position) {
+                                GridCell::Path(_, item) if item.is_some() => {
+                                    game_state.picked_up_item = true;
+                                    player.pick_up(item.take().unwrap());
+                                }
                                 GridCell::Goal => {
                                     game_state.winners.push(player.player_number());
                                     game_state.current_action = GameAction::HasMoved;
@@ -349,12 +353,19 @@ pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>
             GameAction::Moving(_, remaining) => {
                 ui.label("Use WASD to move");
                 ui.label(format!("{} steps remaining", remaining));
+                if game_state.picked_up_item {
+                    ui.label("You picked up an item!");
+                }
             }
             GameAction::HasMoved => {
                 if game_state.winners.contains(&game_state.active_player) {
                     ui.label("You have reached the goal!");
+                } else {
+                    if game_state.picked_up_item {
+                        ui.label("You picked up an item!");
+                    }
+                    ui.label("Press E to view your inventory.");
                 }
-                ui.label("Press E to view your inventory.");
                 ui.label("Press Enter to end your turn.");
             }
         }

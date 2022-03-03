@@ -255,6 +255,11 @@ impl Map {
         let Coordinates(x, y) = coordinates;
         &self.grid[y][x]
     }
+
+    pub fn cell_at_mut(&mut self, coordinates: Coordinates) -> &mut GridCell {
+        let Coordinates(x, y) = coordinates;
+        &mut self.grid[y][x]
+    }
 }
 
 #[cfg(test)]
