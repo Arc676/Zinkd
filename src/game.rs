@@ -161,7 +161,10 @@ pub fn setup_game(
             .insert(player);
     }
     commands.insert_resource(map);
-    commands.insert_resource(GameState::default());
+    commands.insert_resource(GameState {
+        player_count: settings.players(),
+        ..Default::default()
+    });
 }
 
 fn get_control(keyboard: Res<Input<KeyCode>>) -> Option<Control> {
