@@ -40,10 +40,32 @@ use dicey_dungeons::map::*;
 use dicey_dungeons::player::Player;
 use std::cmp::min;
 
+enum GameAction {
+    WaitForInput,
+    UsingItem,
+    Moving,
+}
+
+impl Default for GameAction {
+    fn default() -> Self {
+        GameAction::WaitForInput
+    }
+}
+
 #[derive(Default)]
 pub struct GameState {
+    player_count: u32,
     paused: bool,
     active_player: u32,
+    current_action: GameAction,
+    inventory_visible: bool,
+    rolled_value: Option<u32>,
+}
+
+enum Control {
+    Roll,
+    Inventory,
+    UseItem(usize),
 }
 
 pub fn setup_game(
@@ -142,9 +164,46 @@ pub fn setup_game(
     commands.insert_resource(GameState::default());
 }
 
-pub fn update_game(mut game_state: ResMut<GameState>, keyboard: Res<Input<KeyCode>>) {
+fn get_control(keyboard: Res<Input<KeyCode>>) -> Option<Control> {
+    if keyboard.just_released(KeyCode::R) {
+        return Some(Control::Roll);
+    }
+    if keyboard.just_released(KeyCode::I) {
+        return Some(Control::Inventory);
+    }
+    None
+}
+
+fn end_turn(mut game_state: ResMut<GameState>) {
+    game_state.rolled_value = None;
+    game_state.inventory_visible = false;
+    game_state.active_player = (game_state.active_player + 1) % game_state.player_count;
+}
+
+pub fn update_game(
+    mut game_state: ResMut<GameState>,
+    keyboard: Res<Input<KeyCode>>,
+    player: ResMut<Player>,
+) {
     if keyboard.just_released(KeyCode::Escape) {
         game_state.paused = !game_state.paused;
+    }
+    if game_state.active_player == player.player_number() {
+        match game_state.current_action {
+            GameAction::WaitForInput => {
+                if let Some(action) = get_control(keyboard) {
+                    match action {
+                        Control::Roll => game_state.rolled_value = Some(player.roll()),
+                        Control::Inventory => {
+                            game_state.inventory_visible = !game_state.inventory_visible
+                        }
+                        Control::UseItem(_) => {}
+                    }
+                }
+            }
+            GameAction::UsingItem => {}
+            GameAction::Moving => {}
+        }
     }
 }
 
