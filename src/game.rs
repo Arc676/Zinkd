@@ -67,6 +67,8 @@ pub struct GameState {
     current_action: GameAction,
     inventory_visible: bool,
     rolled_value: Option<u32>,
+    winners: Vec<u32>,
+    game_over: bool,
 }
 
 enum Control {
@@ -221,7 +223,12 @@ fn get_control(keyboard: &Res<Input<KeyCode>>) -> Option<Control> {
 fn end_turn(game_state: &mut ResMut<GameState>) {
     game_state.rolled_value = None;
     game_state.inventory_visible = false;
-    game_state.active_player = (game_state.active_player + 1) % game_state.player_count;
+    loop {
+        game_state.active_player = (game_state.active_player + 1) % game_state.player_count;
+        if !game_state.winners.contains(&game_state.active_player) {
+            break;
+        }
+    }
     game_state.current_action = GameAction::WaitForInput;
 }
 
@@ -272,11 +279,21 @@ pub fn update_game(
                 GameAction::Moving(direction, remaining) => {
                     if let Some(Control::Move(step)) = get_control(&keyboard) {
                         if !directions_are_opposite(step, direction) && player.step(step, &map) {
-                            let Coordinates(x, y) = player.position();
+                            let position = player.position();
+                            let Coordinates(x, y) = position;
                             transform.translation = (Vec2::new(x as f32, y as f32)
                                 * scaling.tile_size
                                 - scaling.offset)
                                 .extend(1.);
+                            match map.cell_at(position) {
+                                GridCell::Path(_, _) => {}
+                                GridCell::Goal => {
+                                    game_state.winners.push(player.player_number());
+                                    game_state.current_action = GameAction::HasMoved;
+                                    break;
+                                }
+                                _ => (),
+                            }
                             let mut step_count = remaining;
                             step_count -= 1;
                             if step_count == 0 {
@@ -294,7 +311,13 @@ pub fn update_game(
                             Control::Inventory => {
                                 game_state.inventory_visible = !game_state.inventory_visible
                             }
-                            Control::EndTurn => end_turn(&mut game_state),
+                            Control::EndTurn => {
+                                if game_state.winners.len() == game_state.player_count as usize {
+                                    game_state.game_over = true;
+                                } else {
+                                    end_turn(&mut game_state)
+                                }
+                            }
                             _ => (),
                         }
                     }
@@ -306,6 +329,14 @@ pub fn update_game(
 
 pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>) {
     egui::Window::new("Control Panel").show(egui_context.ctx_mut(), |ui| {
+        if game_state.game_over {
+            ui.heading("Game over!");
+            ui.label("Leaderboard:");
+            for (place, winner) in game_state.winners.iter().enumerate() {
+                ui.label(format!("{}: Player {}", place + 1, winner + 1));
+            }
+            return;
+        }
         ui.heading(format!("Player {}'s turn", game_state.active_player + 1));
         match game_state.current_action {
             GameAction::WaitForInput => {
@@ -318,6 +349,9 @@ pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>
                 ui.label(format!("{} steps remaining", remaining));
             }
             GameAction::HasMoved => {
+                if game_state.winners.contains(&game_state.active_player) {
+                    ui.label("You have reached the goal!");
+                }
                 ui.label("Press Enter to end your turn.");
             }
         }
@@ -329,14 +363,13 @@ pub fn pause_menu(
     mut state: ResMut<State<AppState>>,
     game_state: Res<GameState>,
 ) {
-    if !game_state.paused {
-        return;
+    if game_state.paused || game_state.game_over {
+        egui::Window::new("Pause").show(egui_context.ctx_mut(), |ui| {
+            if ui.button("Back to Main").clicked() {
+                state.set(AppState::MainMenu).unwrap();
+            }
+        });
     }
-    egui::Window::new("Pause").show(egui_context.ctx_mut(), |ui| {
-        if ui.button("Back to Main").clicked() {
-            state.set(AppState::MainMenu).unwrap();
-        }
-    });
 }
 
 pub fn cleanup_game(mut commands: Commands, sprite_query: Query<Entity, With<Sprite>>) {
