@@ -176,7 +176,7 @@ pub fn setup_game(
     let texture = asset_server.load("sprites/DieFaces.png");
     let texture_atlas = TextureAtlas::from_grid(texture, Vec2::splat(32.), 6, 1);
     let texture_atlas = texture_atlases.add(texture_atlas);
-    let translation = Vec2::new(-width as f32 / 2. + 20., height as f32 / 2. - 20.).extend(0.);
+    let translation = Vec2::new(width as f32 / 2. - 20., height as f32 / 2. - 20.).extend(0.);
     commands.spawn_bundle(SpriteSheetBundle {
         texture_atlas,
         transform: Transform {
@@ -308,9 +308,9 @@ pub fn update_game(
 }
 
 pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>) {
-    egui::Window::new(format!("Player {}'s turn", game_state.active_player + 1)).show(
-        egui_context.ctx_mut(),
-        |ui| match game_state.current_action {
+    egui::Window::new("Control Panel").show(egui_context.ctx_mut(), |ui| {
+        ui.heading(format!("Player {}'s turn", game_state.active_player + 1));
+        match game_state.current_action {
             GameAction::WaitForInput => {
                 ui.label("Press R to roll");
                 ui.label("Press I to view your inventory");
@@ -323,8 +323,8 @@ pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>
             GameAction::HasMoved => {
                 ui.label("Press Enter to end your turn.");
             }
-        },
-    );
+        }
+    });
 }
 
 pub fn pause_menu(
