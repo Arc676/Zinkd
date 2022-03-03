@@ -32,7 +32,7 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-use crate::dice::{WeightTransform, WeightedDie};
+use crate::dice::WeightTransform;
 use crate::player::Player;
 
 pub type HeldItem = Box<dyn Item>;
@@ -41,7 +41,7 @@ pub type PossibleItem = Option<HeldItem>;
 pub trait Item: Send + Sync {
     fn short_description(&self) -> &str;
     fn full_description(&self) -> &str;
-    fn use_item(&self, player: &mut Player, die: &mut WeightedDie);
+    fn use_item(&self, player: &mut Player);
 }
 
 pub enum ItemType {
@@ -80,7 +80,7 @@ impl Item for WeightTransfer {
         &self.full
     }
 
-    fn use_item(&self, _player: &mut Player, die: &mut WeightedDie) {
-        die.apply_transformation(&self.transform);
+    fn use_item(&self, player: &mut Player) {
+        player.transform_die(&self.transform);
     }
 }

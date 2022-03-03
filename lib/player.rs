@@ -32,7 +32,7 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-use crate::dice::WeightedDie;
+use crate::dice::{WeightTransform, WeightedDie};
 use crate::items::HeldItem;
 use crate::map::{Coordinates, Direction, GridCell, Map};
 use bevy::ecs::component::Component;
@@ -92,6 +92,12 @@ impl Player {
 
     pub fn use_item(&mut self, index: usize) {
         debug_assert!(index < self.inventory.len());
+        let item = self.inventory.remove(index);
+        item.use_item(self);
+    }
+
+    pub fn transform_die(&mut self, transform: &WeightTransform) {
+        self.die.apply_transformation(transform);
     }
 
     pub fn roll(&self) -> u32 {
