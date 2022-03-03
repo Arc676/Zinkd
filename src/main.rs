@@ -35,8 +35,8 @@
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
 
-mod main_menu;
 mod game;
+mod main_menu;
 mod settings;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -58,6 +58,7 @@ fn main() {
         .add_system_set(SystemSet::on_enter(AppState::Game).with_system(game::setup_game))
         .add_system_set(SystemSet::on_update(AppState::Game).with_system(game::update_game))
         .add_system_set(SystemSet::on_update(AppState::Game).with_system(game::update_die))
+        .add_system_set(SystemSet::on_update(AppState::Game).with_system(game::game_ui))
         .add_system_set(SystemSet::on_update(AppState::Game).with_system(game::pause_menu))
         .add_system_set(SystemSet::on_exit(AppState::Game).with_system(game::cleanup_game))
         .add_system_set(SystemSet::on_update(AppState::Settings).with_system(settings::settings_ui))

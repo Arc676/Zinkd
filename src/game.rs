@@ -216,6 +216,7 @@ fn end_turn(game_state: &mut ResMut<GameState>) {
     game_state.rolled_value = None;
     game_state.inventory_visible = false;
     game_state.active_player = (game_state.active_player + 1) % game_state.player_count;
+    game_state.current_action = GameAction::WaitForInput;
 }
 
 pub fn update_die(
@@ -293,6 +294,26 @@ pub fn update_game(
             }
         }
     }
+}
+
+pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>) {
+    egui::Window::new(format!("Player {}'s turn", game_state.active_player + 1)).show(
+        egui_context.ctx_mut(),
+        |ui| match game_state.current_action {
+            GameAction::WaitForInput => {
+                ui.label("Press R to roll");
+                ui.label("Press I to view your inventory");
+            }
+            GameAction::UsingItem => {}
+            GameAction::Moving(_, remaining) => {
+                ui.label("Use WASD to move");
+                ui.label(format!("{} steps remaining", remaining));
+            }
+            GameAction::HasMoved => {
+                ui.label("Press Enter to end your turn.");
+            }
+        },
+    );
 }
 
 pub fn pause_menu(
