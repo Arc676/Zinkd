@@ -72,11 +72,11 @@ impl WeightedDie {
         let mut roll: f64 = rand::thread_rng().gen_range(0.0..1.0);
         for (value, weight) in self.weights.iter().enumerate() {
             if roll < weight.norm_sqr() {
-                return value as u32;
+                return value as u32 + 1;
             }
             roll -= weight.norm_sqr();
         }
-        0
+        panic!("Failed to roll a number");
     }
 
     pub fn apply_transformation(&mut self, transform: &WeightTransform) {
@@ -183,7 +183,7 @@ mod tests {
         let mut results = [0; 6];
         for _ in 0..count {
             let roll = die.roll();
-            results[roll as usize] += 1;
+            results[roll as usize - 1] += 1;
         }
         results
     }
