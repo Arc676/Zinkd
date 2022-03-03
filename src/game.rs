@@ -32,13 +32,13 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-use std::cmp::min;
 use crate::settings::GameSettings;
 use crate::AppState;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContext};
 use dicey_dungeons::map::*;
 use dicey_dungeons::player::Player;
+use std::cmp::min;
 
 #[derive(Default)]
 pub struct GameState {
@@ -70,10 +70,12 @@ pub fn setup_game(
     let tile_size = (min(tile_width, tile_height) / 24) * 24;
     let tile_size = Vec2::splat(tile_size as f32);
 
-    let offset = Vec2::new(settings.map_width() as f32 / 2. - 0.5, settings.map_height() as f32 / 2. - 0.5) * tile_size;
-    let coords_to_vec = |x: usize, y: usize, z: f32| {
-        (Vec2::new(x as f32, y as f32) * tile_size - offset).extend(z)
-    };
+    let offset = Vec2::new(
+        settings.map_width() as f32 / 2. - 0.5,
+        settings.map_height() as f32 / 2. - 0.5,
+    ) * tile_size;
+    let coords_to_vec =
+        |x: usize, y: usize, z: f32| (Vec2::new(x as f32, y as f32) * tile_size - offset).extend(z);
 
     let longitudinal = asset_server.load("tiles/tile_straight.png");
     let latitudinal = asset_server.load("tiles/tile_straight_h.png");
@@ -116,18 +118,19 @@ pub fn setup_game(
         let texture = asset_server.load(sprite.path());
         let translation = coords_to_vec(*x, *y, 1.);
 
-        commands.spawn_bundle(SpriteBundle {
-            texture,
-            transform: Transform {
-                translation,
+        commands
+            .spawn_bundle(SpriteBundle {
+                texture,
+                transform: Transform {
+                    translation,
+                    ..Default::default()
+                },
+                sprite: Sprite {
+                    custom_size: Some(tile_size / 2.),
+                    ..Default::default()
+                },
                 ..Default::default()
-            },
-            sprite: Sprite {
-                custom_size: Some(tile_size / 2.),
-                ..Default::default()
-            },
-            ..Default::default()
-        })
+            })
             .insert(player);
     }
     commands.insert_resource(map);
@@ -155,7 +158,7 @@ pub fn pause_menu(
     });
 }
 
-pub fn cleanup_game(mut commands: Commands, sprite_query: Query<(Entity), With<Sprite>>) {
+pub fn cleanup_game(mut commands: Commands, sprite_query: Query<Entity, With<Sprite>>) {
     commands.remove_resource::<Map>();
     for sprite in sprite_query.iter() {
         commands.entity(sprite).despawn();
