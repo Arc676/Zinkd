@@ -32,13 +32,13 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-use std::fmt::Formatter;
-use std::slice::Iter;
 use crate::AppState;
 use bevy::prelude::*;
 use bevy_egui::egui::emath::Numeric;
 use bevy_egui::egui::{Separator, Slider, Ui};
 use bevy_egui::{egui, EguiContext};
+use std::fmt::Formatter;
+use std::slice::Iter;
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum PlayerSprite {
@@ -48,10 +48,14 @@ pub enum PlayerSprite {
 
 impl std::fmt::Display for PlayerSprite {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            PlayerSprite::Ferris => "Ferris",
-            PlayerSprite::Darryl => "Darryl",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                PlayerSprite::Ferris => "Ferris",
+                PlayerSprite::Darryl => "Darryl",
+            }
+        )
     }
 }
 
@@ -77,9 +81,9 @@ impl Default for GameSettings {
         GameSettings {
             players: 2,
             player_sprites: vec![PlayerSprite::Ferris, PlayerSprite::Darryl],
-            map_width: 10,
-            map_height: 10,
-            initial_travel_distance: 5,
+            map_width: 20,
+            map_height: 20,
+            initial_travel_distance: 10,
         }
     }
 }
@@ -111,8 +115,8 @@ impl GameSettings {
 }
 
 fn number_setting<T>(ui: &mut Ui, num: &mut T, min: T, max: T, lbl: &str)
-    where
-        T: Numeric,
+where
+    T: Numeric,
 {
     ui.label(lbl);
     let slider = Slider::new(num, min..=max);
@@ -138,13 +142,21 @@ pub fn settings_ui(
             egui::ComboBox::from_label(format!("Player {} sprite", i + 1))
                 .selected_text(sprite.to_string())
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(sprite, PlayerSprite::Ferris, PlayerSprite::Ferris.to_string());
-                    ui.selectable_value(sprite, PlayerSprite::Darryl, PlayerSprite::Darryl.to_string());
+                    ui.selectable_value(
+                        sprite,
+                        PlayerSprite::Ferris,
+                        PlayerSprite::Ferris.to_string(),
+                    );
+                    ui.selectable_value(
+                        sprite,
+                        PlayerSprite::Darryl,
+                        PlayerSprite::Darryl.to_string(),
+                    );
                 });
         }
 
-        number_setting(ui, &mut settings.map_width, 5, 20, "Map width");
-        number_setting(ui, &mut settings.map_height, 5, 20, "Map height");
+        number_setting(ui, &mut settings.map_width, 5, 60, "Map width");
+        number_setting(ui, &mut settings.map_height, 5, 60, "Map height");
 
         let sep = Separator::default().spacing(12.).horizontal();
         ui.add(sep);
@@ -154,11 +166,12 @@ pub fn settings_ui(
          a fixed length before additional paths are generated. This initial distance can be \
          freely chosen.",
         );
+        let max_dist = settings.map_height.min(settings.map_width) / 2;
         number_setting(
             ui,
             &mut settings.initial_travel_distance,
-            2,
-            20,
+            1,
+            max_dist,
             "Initial travel distance",
         );
 
