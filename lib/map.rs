@@ -109,6 +109,7 @@ impl Map {
         map_width: usize,
         map_height: usize,
         players: u32,
+        item_density: f64,
         travel_distance: usize,
     ) -> Self {
         let mut grid = Grid::with_capacity(map_height);
@@ -136,6 +137,14 @@ impl Map {
             map.connect_cells(start, goal);
 
             map.starting_points.push(start);
+        }
+
+        let total_squares = (map_width * map_height) as f64;
+        let item_squares = (total_squares * item_density).round() as usize;
+        for _ in 0..(item_squares / 2) {
+            let square1 = map.get_random_cell();
+            let square2 = map.get_random_cell();
+            map.connect_cells(square1, square2);
         }
 
         map
@@ -254,7 +263,7 @@ mod tests {
 
     #[test]
     fn generate_map() {
-        let map = Map::generate_random_map(10, 10, 3, 5);
+        let map = Map::generate_random_map(10, 10, 3, 0., 5);
         let mut render = [[' '; 10]; 10];
         for (position, cell) in map.iter() {
             let Coordinates(x, y) = position;

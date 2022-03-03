@@ -93,6 +93,7 @@ pub fn setup_game(
         settings.map_width(),
         settings.map_height(),
         settings.players(),
+        settings.item_density(),
         settings.travel_distance(),
     );
 

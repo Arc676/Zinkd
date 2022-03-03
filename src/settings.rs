@@ -73,6 +73,7 @@ pub struct GameSettings {
     player_sprites: Vec<PlayerSprite>,
     map_width: usize,
     map_height: usize,
+    item_density: f64,
     initial_travel_distance: usize,
 }
 
@@ -83,6 +84,7 @@ impl Default for GameSettings {
             player_sprites: vec![PlayerSprite::Ferris, PlayerSprite::Darryl],
             map_width: 20,
             map_height: 20,
+            item_density: 0.1,
             initial_travel_distance: 10,
         }
     }
@@ -107,6 +109,10 @@ impl GameSettings {
 
     pub fn map_height(&self) -> usize {
         self.map_height
+    }
+
+    pub fn item_density(&self) -> f64 {
+        self.item_density
     }
 
     pub fn travel_distance(&self) -> usize {
@@ -174,6 +180,8 @@ pub fn settings_ui(
             max_dist,
             "Initial travel distance",
         );
+
+        number_setting(ui, &mut settings.item_density, 0., 0.8, "Item density");
 
         let sep = Separator::default().spacing(12.).horizontal();
         ui.add(sep);
