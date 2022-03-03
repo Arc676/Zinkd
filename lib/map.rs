@@ -67,8 +67,8 @@ pub struct Coordinates(pub usize, pub usize);
 impl Coordinates {
     pub fn step(&mut self, direction: Direction) {
         match direction {
-            NORTH => self.1 -= 1,
-            SOUTH => self.1 += 1,
+            NORTH => self.1 += 1,
+            SOUTH => self.1 -= 1,
             EAST => self.0 += 1,
             WEST => self.0 -= 1,
             _ => panic!("Cannot move in this direction"),

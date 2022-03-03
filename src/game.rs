@@ -41,6 +41,11 @@ use dicey_dungeons::map::*;
 use dicey_dungeons::player::Player;
 use std::cmp::min;
 
+pub struct ScalingData {
+    tile_size: Vec2,
+    offset: Vec2,
+}
+
 enum GameAction {
     WaitForInput,
     UsingItem,
@@ -104,6 +109,7 @@ pub fn setup_game(
     ) * tile_size;
     let coords_to_vec =
         |x: usize, y: usize, z: f32| (Vec2::new(x as f32, y as f32) * tile_size - offset).extend(z);
+    commands.insert_resource(ScalingData { tile_size, offset });
 
     let longitudinal = asset_server.load("tiles/tile_straight.png");
     let latitudinal = asset_server.load("tiles/tile_straight_h.png");
@@ -237,12 +243,13 @@ pub fn update_die(
 pub fn update_game(
     mut game_state: ResMut<GameState>,
     keyboard: Res<Input<KeyCode>>,
-    mut query: Query<&mut Player>,
+    scaling: Res<ScalingData>,
+    mut query: Query<(&mut Player, &mut Transform)>,
 ) {
     if keyboard.just_released(KeyCode::Escape) {
         game_state.paused = !game_state.paused;
     }
-    for mut player in query.iter_mut() {
+    for (mut player, mut transform) in query.iter_mut() {
         if game_state.active_player == player.player_number() {
             match game_state.current_action {
                 GameAction::WaitForInput => {
@@ -264,17 +271,21 @@ pub fn update_game(
                 GameAction::Moving(direction, remaining) => {
                     if let Some(action) = get_control(&keyboard) {
                         if let Control::Move(step) = action {
-                            player.step(step);
-                            let mut step_count = remaining;
-                            if directions_are_opposite(step, direction) {
-                                step_count += 1;
-                            } else {
+                            if !directions_are_opposite(step, direction) {
+                                player.step(step);
+                                let Coordinates(x, y) = player.position();
+                                transform.translation = (Vec2::new(x as f32, y as f32)
+                                    * scaling.tile_size
+                                    - scaling.offset)
+                                    .extend(1.);
+                                let mut step_count = remaining;
                                 step_count -= 1;
-                            }
-                            if step_count == 0 {
-                                game_state.current_action = GameAction::HasMoved;
-                            } else {
-                                game_state.current_action = GameAction::Moving(step, step_count);
+                                if step_count == 0 {
+                                    game_state.current_action = GameAction::HasMoved;
+                                } else {
+                                    game_state.current_action =
+                                        GameAction::Moving(step, step_count);
+                                }
                             }
                         }
                     }
