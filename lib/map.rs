@@ -259,7 +259,10 @@ impl Map {
                 Coordinates(fixed_coord, coord)
             };
             let direction = if x_range { EAST | WEST } else { NORTH | SOUTH };
-            self.supplement_cell(node, direction);
+            match self.cell_at(node) {
+                GridCell::Goal => (),
+                _ => self.supplement_cell(node, direction),
+            }
         }
     }
 
