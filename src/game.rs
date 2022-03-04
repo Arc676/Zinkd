@@ -216,7 +216,9 @@ pub fn setup_game(
                         }
                         corner.clone()
                     }
-                    _ => panic!("Unknown direction"),
+                    _ => {
+                        panic!("Unknown direction {}", direction);
+                    }
                 }
             }
             GridCell::Goal => goal.clone(),
@@ -669,7 +671,7 @@ fn inventory_window(
         let mut used = None;
         for (i, item) in player.items().enumerate() {
             ui.horizontal(|ui| {
-                ui.collapsing(item.short_description(), |ui| {
+                ui.collapsing(format!("{}: {}", i, item.short_description()), |ui| {
                     ui.label(item.full_description());
                     ui.horizontal(|ui| {
                         let names = game_state.player_names.clone();
@@ -681,7 +683,7 @@ fn inventory_window(
                             }
                         };
                         ui.label("Use this on");
-                        egui::ComboBox::from_label("")
+                        egui::ComboBox::from_id_source(format!("target_picker_{}", i))
                             .selected_text(description(game_state.item_preview.target_player))
                             .show_ui(ui, |ui| {
                                 for num in 0..game_state.player_count {
