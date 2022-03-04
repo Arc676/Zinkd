@@ -51,7 +51,7 @@ pub struct WeightTransform {
 impl Clone for WeightedDie {
     fn clone(&self) -> Self {
         WeightedDie {
-            weights: self.weights.clone(),
+            weights: self.weights,
         }
     }
 }

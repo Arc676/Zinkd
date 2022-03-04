@@ -295,9 +295,9 @@ pub fn update_game(
                     }
                 }
                 GameAction::UsingItem => {}
-                GameAction::Moving(direction, remaining) => {
+                GameAction::Moving(_, remaining) => {
                     if let Some(Control::Move(step)) = get_control(&keyboard) {
-                        if !directions_are_opposite(step, direction) && player.step(step, &map) {
+                        if player.step(step, &map) {
                             let position = player.position();
                             let Coordinates(x, y) = position;
                             transform.translation = (Vec2::new(x as f32, y as f32)
@@ -437,7 +437,7 @@ fn item_preview(
         ui.horizontal(|ui| {
             ui.label(format!(
                 "Use {} item on {}?",
-                item_preview.item_type.to_string(),
+                item_preview.item_type,
                 if item_preview.source_player == item_preview.target_player {
                     "yourself".to_string()
                 } else {
