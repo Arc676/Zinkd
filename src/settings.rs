@@ -71,6 +71,7 @@ impl PlayerSprite {
 pub struct GameSettings {
     players: u32,
     player_sprites: Vec<PlayerSprite>,
+    player_names: Vec<String>,
     map_width: usize,
     map_height: usize,
     item_density: f64,
@@ -82,6 +83,7 @@ impl Default for GameSettings {
         GameSettings {
             players: 2,
             player_sprites: vec![PlayerSprite::Ferris, PlayerSprite::Darryl],
+            player_names: vec!["Ferris".to_string(), "Darryl".to_string()],
             map_width: 20,
             map_height: 20,
             item_density: 0.1,
@@ -101,6 +103,10 @@ impl GameSettings {
 
     pub fn player_sprites_iter(&self) -> Iter<'_, PlayerSprite> {
         self.player_sprites.iter()
+    }
+
+    pub fn player_names_iter(&self) -> Iter<'_, String> {
+        self.player_names.iter()
     }
 
     pub fn map_width(&self) -> usize {
@@ -143,22 +149,27 @@ pub fn settings_ui(
             settings.player_sprites.resize(size, PlayerSprite::Ferris);
         }
 
+        ui.label("Choose player names and sprites");
         for i in 0..settings.players {
-            let sprite = &mut settings.player_sprites[i as usize];
-            egui::ComboBox::from_label(format!("Player {} sprite", i + 1))
-                .selected_text(sprite.to_string())
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(
-                        sprite,
-                        PlayerSprite::Ferris,
-                        PlayerSprite::Ferris.to_string(),
-                    );
-                    ui.selectable_value(
-                        sprite,
-                        PlayerSprite::Darryl,
-                        PlayerSprite::Darryl.to_string(),
-                    );
-                });
+            ui.horizontal(|ui| {
+                ui.label(format!("Player {}:", i + 1));
+                ui.text_edit_singleline(&mut settings.player_names[i as usize]);
+                let sprite = &mut settings.player_sprites[i as usize];
+                egui::ComboBox::from_id_source(format!("sprite_picker_{}", i))
+                    .selected_text(sprite.to_string())
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(
+                            sprite,
+                            PlayerSprite::Ferris,
+                            PlayerSprite::Ferris.to_string(),
+                        );
+                        ui.selectable_value(
+                            sprite,
+                            PlayerSprite::Darryl,
+                            PlayerSprite::Darryl.to_string(),
+                        );
+                    });
+            });
         }
 
         number_setting(ui, &mut settings.map_width, 5, 60, "Map width");

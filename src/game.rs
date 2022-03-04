@@ -200,13 +200,14 @@ pub fn setup_game(
     }
     commands.spawn_batch(sprites);
 
-    for (num, (sprite, spawn_pos)) in settings
+    for (num, ((sprite, name), spawn_pos)) in settings
         .player_sprites_iter()
+        .zip(settings.player_names_iter())
         .zip(map.starting_positions())
         .enumerate()
     {
         let Coordinates(x, y) = spawn_pos;
-        let player = Player::spawn_at(*spawn_pos, "Player".to_string(), num as u32);
+        let player = Player::spawn_at(*spawn_pos, name.clone(), num as u32);
 
         let texture = asset_server.load(sprite.path());
         let translation = coords_to_vec(*x, *y, 1.);
@@ -224,7 +225,7 @@ pub fn setup_game(
                 },
                 ..Default::default()
             })
-            .insert(EntityTooltip(player.name().to_string()))
+            .insert(EntityTooltip(name.clone()))
             .insert(player);
     }
     commands.insert_resource(map);
