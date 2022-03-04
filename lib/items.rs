@@ -43,9 +43,11 @@ pub trait Item: Send + Sync {
     fn short_description(&self) -> &str;
     fn full_description(&self) -> &str;
     fn use_item(&self, player: &mut Player);
+    fn item_type(&self) -> ItemType;
 }
 
 const ITEM_TYPES: u32 = 3;
+#[derive(Copy, Clone)]
 pub enum ItemType {
     WeightTransfer,
     DoubleWeightTransfer,
@@ -63,6 +65,7 @@ pub fn random_item() -> HeldItem {
 }
 
 pub struct WeightTransfer {
+    item_type: ItemType,
     transform: WeightTransform,
     short: String,
     full: String,
@@ -87,6 +90,7 @@ fn random_transfer_parameters(count: u32) -> (u32, Vec<u32>, Vec<f64>) {
 impl WeightTransfer {
     fn new_single(from: u32, to: u32, strength: f64) -> Self {
         WeightTransfer {
+            item_type: ItemType::WeightTransfer,
             transform: WeightTransform::superimpose_pair(to, from, strength),
             short: format!("Weight transfer {} > {}", from, to),
             full: format!(
@@ -107,6 +111,7 @@ impl WeightTransfer {
 
     fn new_double(from1: u32, strength1: f64, from2: u32, strength2: f64, to: u32) -> Self {
         WeightTransfer {
+            item_type: ItemType::DoubleWeightTransfer,
             transform: WeightTransform::superimpose_pair(to, from1, strength1)
                 .combined_with(&WeightTransform::superimpose_pair(to, from2, strength2)),
             short: format!("Weight transfer {}, {} > {}", from1, from2, to),
@@ -140,6 +145,7 @@ impl WeightTransfer {
         to2: u32,
     ) -> Self {
         WeightTransfer {
+            item_type: ItemType::WeightTransferPair,
             transform: WeightTransform::superimpose_pair(to1, from1, strength1)
                 .combined_with(&WeightTransform::superimpose_pair(to2, from2, strength2)),
             short: format!(
@@ -181,5 +187,9 @@ impl Item for WeightTransfer {
 
     fn use_item(&self, player: &mut Player) {
         player.transform_die(&self.transform);
+    }
+
+    fn item_type(&self) -> ItemType {
+        self.item_type
     }
 }
