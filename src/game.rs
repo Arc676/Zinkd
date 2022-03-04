@@ -92,6 +92,7 @@ pub struct GameState {
     player_count: u32,
     paused: bool,
     active_player: u32,
+    player_names: Vec<String>,
     current_action: GameAction,
     hover_item: Option<String>,
     item_preview: ItemUsePreview,
@@ -99,6 +100,7 @@ pub struct GameState {
     picked_up_item: Option<String>,
     rolled_value: Option<u32>,
     winners: Vec<u32>,
+    winner_names: Vec<String>,
     game_over: bool,
 }
 
@@ -200,6 +202,7 @@ pub fn setup_game(
     }
     commands.spawn_batch(sprites);
 
+    let mut player_names = vec![];
     for (num, ((sprite, name), spawn_pos)) in settings
         .player_sprites_iter()
         .zip(settings.player_names_iter())
@@ -207,6 +210,7 @@ pub fn setup_game(
         .enumerate()
     {
         let Coordinates(x, y) = spawn_pos;
+        player_names.push(name.clone());
         let player = Player::spawn_at(*spawn_pos, name.clone(), num as u32);
 
         let texture = asset_server.load(sprite.path());
@@ -246,6 +250,7 @@ pub fn setup_game(
 
     commands.insert_resource(GameState {
         player_count: settings.players(),
+        player_names,
         ..Default::default()
     });
 }
@@ -395,6 +400,7 @@ pub fn update_game(
                                 }
                                 GridCell::Goal => {
                                     game_state.winners.push(player.player_number());
+                                    game_state.winner_names.push(player.name().to_string());
                                     game_state.current_action = GameAction::HasMoved;
                                     break;
                                 }
@@ -438,12 +444,15 @@ pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>
         if game_state.game_over {
             ui.heading("Game over!");
             ui.label("Leaderboard:");
-            for (place, winner) in game_state.winners.iter().enumerate() {
-                ui.label(format!("{}: Player {}", place + 1, winner + 1));
+            for (place, winner) in game_state.winner_names.iter().enumerate() {
+                ui.label(format!("{}: {}", place + 1, winner));
             }
             return;
         }
-        ui.heading(format!("Player {}'s turn", game_state.active_player + 1));
+        ui.heading(format!(
+            "{}'s turn",
+            game_state.player_names[game_state.active_player as usize]
+        ));
         match game_state.current_action {
             GameAction::WaitForInput => {
                 ui.label("Press R to roll");
@@ -599,10 +608,7 @@ fn die_inspector(
 ) {
     let player = get_player_with_number(game_state.active_player, query);
     egui::Window::new("Die Inspector").show(egui_context.ctx_mut(), |ui| {
-        ui.heading(format!(
-            "Die weights for Player {}",
-            player.player_number() + 1
-        ));
+        ui.heading(format!("Die weights for {}", player.name()));
         let (painter, to_screen) = get_painter(ui);
         die_weight_labels(&painter, to_screen);
         player
@@ -618,7 +624,7 @@ fn inventory_window(
 ) {
     let player = get_player_with_number(game_state.active_player, query);
     egui::Window::new("Inventory").show(egui_context.ctx_mut(), |ui| {
-        ui.heading(format!("Player {}'s inventory", player.player_number() + 1));
+        ui.heading(format!("{}'s inventory", player.name()));
         if player.inventory_empty() {
             ui.label("No items");
             return;
@@ -629,11 +635,12 @@ fn inventory_window(
                 ui.collapsing(item.short_description(), |ui| {
                     ui.label(item.full_description());
                     ui.horizontal(|ui| {
+                        let names = game_state.player_names.clone();
                         let description = |num| {
                             if num == player.player_number() {
-                                "Yourself".to_string()
+                                "Yourself"
                             } else {
-                                format!("Player {}", num + 1)
+                                &names[num as usize]
                             }
                         };
                         ui.label("Use this on");
