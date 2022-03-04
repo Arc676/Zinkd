@@ -55,7 +55,10 @@ pub enum ItemType {
 pub fn random_item() -> HeldItem {
     let mut rng = rand::thread_rng();
     Box::new(match rng.gen_range(0..ITEM_TYPES) {
-        _ => WeightTransfer::random_single(),
+        0 => WeightTransfer::random_single(),
+        1 => WeightTransfer::random_double(),
+        2 => WeightTransfer::random_pair(),
+        _ => panic!("Unknown item type"),
     })
 }
 
@@ -87,7 +90,7 @@ impl WeightTransfer {
             transform: WeightTransform::superimpose_pair(to, from, strength),
             short: format!("Weight transfer {} > {}", from, to),
             full: format!(
-                "Changes the weights on {1}, {2} to a weighted average favoring {2} at {0:0}%",
+                "Changes the weights on {1}, {2} to a weighted average favoring {2} at {0:.0}%",
                 strength * 100.,
                 from,
                 to
@@ -104,13 +107,17 @@ impl WeightTransfer {
 
     fn new_double(from1: u32, strength1: f64, from2: u32, strength2: f64, to: u32) -> Self {
         WeightTransfer {
-            transform: WeightTransform::superimpose_pair(from1, to, strength1)
-                .combined_with(&WeightTransform::superimpose_pair(from2, to, strength2)),
+            transform: WeightTransform::superimpose_pair(to, from1, strength1)
+                .combined_with(&WeightTransform::superimpose_pair(to, from2, strength2)),
             short: format!("Weight transfer {}, {} > {}", from1, from2, to),
             full: format!(
                 "Sets the weight on {0} to a weighted average with the weight \
-                on {1} and then the weight on {2}, favoring {0} at {3:0}% and then {4:0}%",
-                to, from2, from1, strength2, strength1
+                on {1} and then the weight on {2}, favoring {0} at {3:.0}% and then {4:.0}%",
+                to,
+                from2,
+                from1,
+                strength2 * 100.,
+                strength1 * 100.
             ),
         }
     }
@@ -122,6 +129,44 @@ impl WeightTransfer {
         let strength1 = strengths.pop().unwrap();
         let strength2 = strengths.pop().unwrap();
         WeightTransfer::new_double(from1, strength1, from2, strength2, to)
+    }
+
+    fn new_pair(
+        from1: u32,
+        strength1: f64,
+        to1: u32,
+        from2: u32,
+        strength2: f64,
+        to2: u32,
+    ) -> Self {
+        WeightTransfer {
+            transform: WeightTransform::superimpose_pair(to1, from1, strength1)
+                .combined_with(&WeightTransform::superimpose_pair(to2, from2, strength2)),
+            short: format!(
+                "Weight transfers {} > {} and {} > {}",
+                from1, to1, from2, to2
+            ),
+            full: format!(
+                "Performs two weighed averages: {1} and {2}, \
+            favoring {1} at {0:.0}%; {4} and {5}, favoring {4} at {3:.0}%",
+                to1,
+                from1,
+                strength1 * 100.,
+                to2,
+                from2,
+                strength2 * 100.
+            ),
+        }
+    }
+
+    fn random_pair() -> Self {
+        let (to1, mut from1, mut strength1) = random_transfer_parameters(1);
+        let from1 = from1.pop().unwrap();
+        let strength1 = strength1.pop().unwrap();
+        let (to2, mut from2, mut strength2) = random_transfer_parameters(1);
+        let from2 = from2.pop().unwrap();
+        let strength2 = strength2.pop().unwrap();
+        WeightTransfer::new_pair(from1, strength1, to1, from2, strength2, to2)
     }
 }
 
