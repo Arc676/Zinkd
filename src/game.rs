@@ -38,13 +38,16 @@ use bevy::ecs::component::Component;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContext};
 use dicey_dungeons::dice::WeightedDie;
-use dicey_dungeons::items::{ItemTooltip, ItemType};
+use dicey_dungeons::items::ItemType;
 use dicey_dungeons::map::Direction;
 use dicey_dungeons::map::*;
 use dicey_dungeons::player::Player;
 
 #[derive(Component)]
 pub struct MainCamera;
+
+#[derive(Component)]
+pub struct EntityTooltip(String);
 
 pub struct ScalingData {
     tile_size: Vec2,
@@ -170,7 +173,7 @@ pub fn setup_game(
                             },
                             ..Default::default()
                         })
-                        .insert(item.create_tooltip());
+                        .insert(EntityTooltip(item.short_description().to_string()));
                 }
                 match *direction {
                     OMNIDIRECTIONAL => omnidirectional.clone(),
@@ -203,7 +206,7 @@ pub fn setup_game(
         .enumerate()
     {
         let Coordinates(x, y) = spawn_pos;
-        let player = Player::spawn_at(*spawn_pos, num as u32);
+        let player = Player::spawn_at(*spawn_pos, "Player".to_string(), num as u32);
 
         let texture = asset_server.load(sprite.path());
         let translation = coords_to_vec(*x, *y, 1.);
@@ -221,6 +224,7 @@ pub fn setup_game(
                 },
                 ..Default::default()
             })
+            .insert(EntityTooltip(player.name().to_string()))
             .insert(player);
     }
     commands.insert_resource(map);
@@ -300,12 +304,12 @@ pub fn update_die(
     }
 }
 
-pub fn item_tooltips(
+pub fn entity_tooltips(
     mut game_state: ResMut<GameState>,
     scaling_data: Res<ScalingData>,
     windows: Res<Windows>,
     camera_query: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
-    item_query: Query<(&GlobalTransform, &ItemTooltip), Without<Player>>,
+    item_query: Query<(&GlobalTransform, &EntityTooltip)>,
 ) {
     // https://bevy-cheatbook.github.io/cookbook/cursor2world.html
     let (camera, camera_transform) = camera_query.single();
@@ -322,7 +326,7 @@ pub fn item_tooltips(
         let ndc_to_world = camera_transform.compute_matrix() * camera.projection_matrix.inverse();
         let world_pos = ndc_to_world.project_point3(ndc.extend(-1.0)).truncate();
 
-        for (transform, ItemTooltip(description)) in item_query.iter() {
+        for (transform, EntityTooltip(description)) in item_query.iter() {
             if world_pos.distance(transform.translation.truncate()) < threshold {
                 game_state.hover_item = Some(description.clone());
                 return;
@@ -339,7 +343,7 @@ pub fn update_game(
     scaling: Res<ScalingData>,
     mut map: ResMut<Map>,
     mut player_query: Query<(&mut Player, &mut Transform)>,
-    item_query: Query<(Entity, &Transform, &ItemTooltip), Without<Player>>,
+    item_query: Query<(Entity, &Transform, &EntityTooltip), Without<Player>>,
 ) {
     if keyboard.just_released(KeyCode::Escape) {
         game_state.paused = !game_state.paused;

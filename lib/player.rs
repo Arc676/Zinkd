@@ -40,6 +40,7 @@ use std::slice::Iter;
 
 #[derive(Component)]
 pub struct Player {
+    name: String,
     position: Coordinates,
     inventory: Vec<HeldItem>,
     die: WeightedDie,
@@ -47,13 +48,18 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn spawn_at(position: Coordinates, player_number: u32) -> Self {
+    pub fn spawn_at(position: Coordinates, name: String, player_number: u32) -> Self {
         Player {
+            name,
             position,
             inventory: vec![],
             die: WeightedDie::fair_die(),
             player_number,
         }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     pub fn player_number(&self) -> u32 {

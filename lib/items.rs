@@ -34,7 +34,6 @@
 
 use crate::dice::{WeightTransform, WeightedDie};
 use crate::player::Player;
-use bevy::ecs::component::Component;
 use rand::Rng;
 use std::fmt::{Display, Formatter};
 
@@ -47,14 +46,7 @@ pub trait Item: Send + Sync {
     fn use_item(&self, player: &mut Player);
     fn use_item_on_die(&self, die: &mut WeightedDie);
     fn item_type(&self) -> ItemType;
-
-    fn create_tooltip(&self) -> ItemTooltip {
-        ItemTooltip(self.short_description().to_string())
-    }
 }
-
-#[derive(Component)]
-pub struct ItemTooltip(pub String);
 
 const ITEM_TYPES: u32 = 3;
 #[derive(Copy, Clone)]
