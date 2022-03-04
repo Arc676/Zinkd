@@ -34,6 +34,7 @@
 
 use crate::settings::GameSettings;
 use crate::AppState;
+use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
 use bevy::{ecs::component::Component, input::mouse::MouseWheel};
 use bevy_egui::{egui, EguiContext};
@@ -498,27 +499,44 @@ pub fn scroll_game(
     mut whl: EventReader<MouseWheel>,
     mut cam: Query<(&mut Transform, &mut OrthographicProjection), With<MainCamera>>,
     windows: Res<Windows>,
+    input_mouse: Res<Input<MouseButton>>,
+    mut prev: Local<Option<Vec2>>,
 ) {
+    let mut tr = Vec2::ZERO;
+
     let delta_zoom: f32 = whl.iter().map(|e| e.y).sum();
-    if delta_zoom == 0. {
-        return;
+    let (mut pos, mut cam) = cam.single_mut();
+    let window = windows.get_primary().unwrap();
+    let cursor_position = match window.cursor_position() {
+        Some(x) => x,
+        None => return,
+    };
+
+    if input_mouse.pressed(MouseButton::Left) {
+        tr = cursor_position - prev.unwrap_or(cursor_position);
     }
 
-    let (mut pos, mut cam) = cam.single_mut();
+    if delta_zoom != 0. {
+        let window_size = Vec2::new(window.width(), window.height());
+        let mouse_normalized_screen_pos = (cursor_position / window_size) * 2. - Vec2::ONE;
+        let mouse_world_pos = pos.translation.truncate()
+            + mouse_normalized_screen_pos * Vec2::new(cam.right, cam.top) * cam.scale;
 
-    let window = windows.get_primary().unwrap();
-    let window_size = Vec2::new(window.width(), window.height());
-    let mouse_normalized_screen_pos =
-        (window.cursor_position().unwrap() / window_size) * 2. - Vec2::ONE;
-    let mouse_world_pos = pos.translation.truncate()
-        + mouse_normalized_screen_pos * Vec2::new(cam.right, cam.top) * cam.scale;
+        cam.scale -= 0.05 * delta_zoom * cam.scale;
+        cam.scale = cam.scale.clamp(0.05, 10.0);
 
-    cam.scale -= 0.05 * delta_zoom * cam.scale;
-    cam.scale = cam.scale.clamp(0.05, 10.0);
-
-    pos.translation = (mouse_world_pos
-        - mouse_normalized_screen_pos * Vec2::new(cam.right, cam.top) * cam.scale)
-        .extend(pos.translation.z);
+        pos.translation = (mouse_world_pos
+            - mouse_normalized_screen_pos * Vec2::new(cam.right, cam.top) * cam.scale)
+            .extend(pos.translation.z);
+    }
+    if tr.length_squared() > 0.0 {
+        let s = Vec2::new(
+            window.width() / (cam.right - cam.left),
+            window.height() / (cam.top - cam.bottom),
+        ) * cam.scale;
+        pos.translation -= (tr * s).extend(0.)
+    }
+    *prev = Some(cursor_position)
 }
 
 pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>) {
