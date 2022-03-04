@@ -63,7 +63,8 @@ fn main() {
                 .with_system(game::game_ui)
                 .with_system(game::player_hud)
                 .with_system(game::entity_tooltips)
-                .with_system(game::pause_menu),
+                .with_system(game::pause_menu)
+                .with_system(game::scroll_game),
         )
         .add_system_set(SystemSet::on_exit(AppState::Game).with_system(game::cleanup_game))
         .add_system_set(SystemSet::on_update(AppState::Settings).with_system(settings::settings_ui))
