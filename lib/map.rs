@@ -143,10 +143,10 @@ impl Map {
         let total_squares = (map_width * map_height) as f64;
         let item_squares = (total_squares * item_density).round() as usize;
         for _ in 0..(item_squares / 2) {
-            let square1 = map.get_random_cell();
+            let square1 = map.get_random_cell_excluding_goal();
             map.supplement_cell(square1, OMNIDIRECTIONAL);
             let item1 = random_item();
-            let square2 = map.get_random_cell();
+            let square2 = map.get_random_cell_excluding_goal();
             map.supplement_cell(square2, OMNIDIRECTIONAL);
             let item2 = random_item();
 
@@ -188,6 +188,14 @@ impl Map {
 
     pub fn height(&self) -> usize {
         self.grid.len()
+    }
+
+    fn get_random_cell_excluding_goal(&self) -> Coordinates {
+        let mut cell = self.get_random_cell();
+        while let GridCell::Goal = self.cell_at(cell) {
+            cell = self.get_random_cell();
+        }
+        cell
     }
 
     fn get_random_cell(&self) -> Coordinates {
