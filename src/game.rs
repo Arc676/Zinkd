@@ -367,7 +367,10 @@ pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>
                 ui.label("Press R to roll");
                 ui.label("Press E to view your inventory");
             }
-            GameAction::UsingItem => {}
+            GameAction::UsingItem => {
+                ui.label("Consult the item preview to see what the item will do.");
+                ui.label("Click confirm to use the item.");
+            }
             GameAction::Moving(_, remaining) => {
                 ui.label("Use WASD to move");
                 ui.label(format!("{} steps remaining", remaining));
@@ -431,9 +434,23 @@ fn item_preview(
         }
     }
     egui::Window::new("Item Effect").show(egui_context.ctx_mut(), |ui| {
-        match game_state.item_preview.effect.as_ref().unwrap() {
+        ui.horizontal(|ui| {
+            ui.label(format!(
+                "Use {} item on {}?",
+                item_preview.item_type.to_string(),
+                if item_preview.source_player == item_preview.target_player {
+                    "yourself".to_string()
+                } else {
+                    format!("Player {}", item_preview.target_player + 1)
+                }
+            ));
+            if ui.button("Confirm").clicked() {
+                //
+            }
+        });
+        match item_preview.effect.as_ref().unwrap() {
             ItemEffect::DieTransform(before, after) => {
-                ui.label("Current weights in red. New weights in green.");
+                ui.label("Lost weight in red. Gained weight in green. Yellow sections unchanged.");
                 let (painter, to_screen) = get_painter(ui);
                 before.visualize_weights(
                     &painter,
@@ -449,9 +466,6 @@ fn item_preview(
             ItemEffect::PlayerAction(effect) => {
                 ui.label(effect);
             }
-        }
-        if ui.button("Confirm").clicked() {
-            // use item
         }
     });
 }
@@ -506,20 +520,25 @@ fn inventory_window(
                 ui.collapsing(item.short_description(), |ui| {
                     ui.label(item.full_description());
                     ui.horizontal(|ui| {
-                        ui.label("Use this on");
-                        egui::ComboBox::from_label("").show_ui(ui, |ui| {
-                            for num in 0..game_state.player_count {
-                                ui.selectable_value(
-                                    &mut game_state.item_preview.target_player,
-                                    num,
-                                    if num == player.player_number() {
-                                        "Yourself".to_string()
-                                    } else {
-                                        format!("Player {}", num + 1)
-                                    },
-                                );
+                        let description = |num| {
+                            if num == player.player_number() {
+                                "Yourself".to_string()
+                            } else {
+                                format!("Player {}", num + 1)
                             }
-                        });
+                        };
+                        ui.label("Use this on");
+                        egui::ComboBox::from_label("")
+                            .selected_text(description(game_state.item_preview.target_player))
+                            .show_ui(ui, |ui| {
+                                for num in 0..game_state.player_count {
+                                    ui.selectable_value(
+                                        &mut game_state.item_preview.target_player,
+                                        num,
+                                        description(num),
+                                    );
+                                }
+                            });
                     });
                     ui.horizontal(|ui| {
                         if ui.button("Use item...").clicked() {
