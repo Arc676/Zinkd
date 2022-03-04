@@ -61,7 +61,7 @@ fn main() {
                 .with_system(game::update_game)
                 .with_system(game::update_die)
                 .with_system(game::game_ui)
-                .with_system(game::inventory_view)
+                .with_system(game::player_hud)
                 .with_system(game::pause_menu),
         )
         .add_system_set(SystemSet::on_exit(AppState::Game).with_system(game::cleanup_game))

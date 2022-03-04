@@ -383,16 +383,24 @@ fn get_active_player<'a>(active_player: u32, query: &'a mut Query<&mut Player>) 
     panic!("No active player");
 }
 
-pub fn inventory_view(
+pub fn player_hud(
     mut egui_context: ResMut<EguiContext>,
     mut query: Query<&mut Player>,
     game_state: Res<GameState>,
 ) {
+    let mut player = get_active_player(game_state.active_player, &mut query);
+    egui::Window::new("Die Inspector").show(egui_context.ctx_mut(), |ui| {
+        ui.heading(format!(
+            "Die weights for Player {}",
+            player.player_number() + 1
+        ));
+        player.visualize_die(ui);
+    });
     if !game_state.inventory_visible {
         return;
     }
-    let mut player = get_active_player(game_state.active_player, &mut query);
     egui::Window::new("Inventory").show(egui_context.ctx_mut(), |ui| {
+        ui.heading(format!("Player {}'s inventory", player.player_number() + 1));
         if player.inventory_empty() {
             ui.label("No items");
             return;

@@ -32,6 +32,7 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+use bevy_egui::egui::*;
 use num_complex::Complex64 as c64;
 use num_traits::identities::{One, Zero};
 use rand::Rng;
@@ -81,6 +82,45 @@ impl WeightedDie {
 
     pub fn apply_transformation(&mut self, transform: &WeightTransform) {
         self.weights = transform.apply(self.weights);
+    }
+
+    pub fn visualize_weights(&self, ui: &mut Ui) {
+        let (response, painter) =
+            ui.allocate_painter(ui.available_size_before_wrap(), Sense::click());
+        let to_screen = emath::RectTransform::from_to(
+            Rect::from_min_size(Pos2::ZERO, response.rect.square_proportions()),
+            response.rect,
+        );
+        for (i, weight) in self.weights.iter().enumerate() {
+            let face = i + 1;
+            painter.text(
+                to_screen
+                    * Pos2 {
+                        x: face as f32 / 7.,
+                        y: 0.1,
+                    },
+                Align2::CENTER_CENTER,
+                face,
+                TextStyle::Body,
+                Color32::WHITE,
+            );
+            painter.rect_filled(
+                Rect::from([
+                    to_screen
+                        * Pos2 {
+                            x: face as f32 / 7. - 1. / 28.,
+                            y: 0.9 - weight.norm_sqr() as f32,
+                        },
+                    to_screen
+                        * Pos2 {
+                            x: face as f32 / 7. + 1. / 28.,
+                            y: 0.9,
+                        },
+                ]),
+                0.,
+                Color32::BLUE,
+            );
+        }
     }
 }
 
