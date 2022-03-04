@@ -36,6 +36,7 @@ use crate::settings::GameSettings;
 use crate::AppState;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContext};
+use dicey_dungeons::dice::WeightedDie;
 use dicey_dungeons::map::Direction;
 use dicey_dungeons::map::*;
 use dicey_dungeons::player::Player;
@@ -60,11 +61,21 @@ impl Default for GameAction {
 }
 
 #[derive(Default)]
+struct ItemUsePreview {
+    source_player: u32,
+    item_index: usize,
+    target_player: Option<u32>,
+    die_before: Option<WeightedDie>,
+    die_after: Option<WeightedDie>,
+}
+
+#[derive(Default)]
 pub struct GameState {
     player_count: u32,
     paused: bool,
     active_player: u32,
     current_action: GameAction,
+    item_preview: ItemUsePreview,
     inventory_visible: bool,
     picked_up_item: Option<String>,
     rolled_value: Option<u32>,
@@ -396,7 +407,7 @@ fn get_painter(ui: &mut egui::Ui) -> (egui::Painter, egui::emath::RectTransform)
 pub fn player_hud(
     mut egui_context: ResMut<EguiContext>,
     mut query: Query<&mut Player>,
-    game_state: Res<GameState>,
+    mut game_state: ResMut<GameState>,
 ) {
     let mut player = get_active_player(game_state.active_player, &mut query);
     egui::Window::new("Die Inspector").show(egui_context.ctx_mut(), |ui| {
@@ -423,29 +434,54 @@ pub fn player_hud(
             .die()
             .visualize_weights(&painter, to_screen, Color32::BLUE);
     });
-    if !game_state.inventory_visible {
-        return;
+    if game_state.inventory_visible {
+        egui::Window::new("Inventory").show(egui_context.ctx_mut(), |ui| {
+            ui.heading(format!("Player {}'s inventory", player.player_number() + 1));
+            if player.inventory_empty() {
+                ui.label("No items");
+                return;
+            }
+            let mut used = None;
+            for (i, item) in player.items().enumerate() {
+                ui.horizontal(|ui| {
+                    ui.collapsing(item.short_description(), |ui| {
+                        ui.label(item.full_description());
+                        ui.horizontal(|ui| {
+                            ui.label("Use this on");
+                            egui::ComboBox::from_label("").show_ui(ui, |ui| {
+                                for num in 0..game_state.player_count {
+                                    ui.selectable_value(
+                                        &mut game_state.item_preview.target_player,
+                                        Some(num),
+                                        if num == player.player_number() {
+                                            "Yourself".to_string()
+                                        } else {
+                                            format!("Player {}", num + 1)
+                                        },
+                                    );
+                                }
+                            });
+                        });
+                        ui.horizontal(|ui| {
+                            if ui.button("Use item...").clicked() {
+                                used = Some(i);
+                            }
+                        });
+                    });
+                });
+            }
+            if let Some(item_index) = used {
+                game_state.item_preview = ItemUsePreview {
+                    source_player: player.player_number(),
+                    item_index,
+                    target_player: game_state.item_preview.target_player,
+                    die_before: None,
+                    die_after: None,
+                };
+                game_state.current_action = GameAction::UsingItem;
+            }
+        });
     }
-    egui::Window::new("Inventory").show(egui_context.ctx_mut(), |ui| {
-        ui.heading(format!("Player {}'s inventory", player.player_number() + 1));
-        if player.inventory_empty() {
-            ui.label("No items");
-            return;
-        }
-        let mut used = None;
-        for (i, item) in player.items().enumerate() {
-            ui.horizontal(|ui| {
-                ui.label(item.short_description())
-                    .on_hover_text(item.full_description());
-                if ui.button("Use item").clicked() {
-                    used = Some(i);
-                }
-            });
-        }
-        if let Some(index) = used {
-            player.use_item(index);
-        }
-    });
 }
 
 pub fn pause_menu(
