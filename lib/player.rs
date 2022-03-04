@@ -33,7 +33,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 use crate::dice::{WeightTransform, WeightedDie};
-use crate::items::HeldItem;
+use crate::items::{HeldItem, ItemType};
 use crate::map::{Coordinates, Direction, GridCell, Map};
 use bevy::ecs::component::Component;
 use std::slice::Iter;
@@ -90,10 +90,20 @@ impl Player {
         self.inventory.iter()
     }
 
-    pub fn use_item(&mut self, index: usize) {
+    pub fn use_item_on_player(&mut self, target: &mut Player, index: usize) {
         debug_assert!(index < self.inventory.len());
         let item = self.inventory.remove(index);
-        item.use_item(self);
+        item.use_item(target);
+    }
+
+    pub fn use_item_on_die(&self, die: &mut WeightedDie, index: usize) {
+        debug_assert!(index < self.inventory.len());
+        self.inventory[index].use_item_on_die(die);
+    }
+
+    pub fn get_item_type(&self, index: usize) -> ItemType {
+        debug_assert!(index < self.inventory.len());
+        self.inventory[index].item_type()
     }
 
     pub fn transform_die(&mut self, transform: &WeightTransform) {

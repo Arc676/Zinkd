@@ -32,7 +32,7 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-use crate::dice::WeightTransform;
+use crate::dice::{WeightTransform, WeightedDie};
 use crate::player::Player;
 use rand::Rng;
 
@@ -43,6 +43,7 @@ pub trait Item: Send + Sync {
     fn short_description(&self) -> &str;
     fn full_description(&self) -> &str;
     fn use_item(&self, player: &mut Player);
+    fn use_item_on_die(&self, die: &mut WeightedDie);
     fn item_type(&self) -> ItemType;
 }
 
@@ -187,6 +188,10 @@ impl Item for WeightTransfer {
 
     fn use_item(&self, player: &mut Player) {
         player.transform_die(&self.transform);
+    }
+
+    fn use_item_on_die(&self, die: &mut WeightedDie) {
+        die.apply_transformation(&self.transform);
     }
 
     fn item_type(&self) -> ItemType {
