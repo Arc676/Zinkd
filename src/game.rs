@@ -414,13 +414,19 @@ fn item_preview(
     query: &mut Query<&mut Player>,
     game_state: &mut ResMut<GameState>,
 ) {
-    let item_preview = &game_state.item_preview;
+    let item_preview = &mut game_state.item_preview;
     if item_preview.effect.is_none() {
-        let target_player = get_player_with_number(item_preview.target_player, query);
         match item_preview.item_type {
             _ => {
-                let die_before = target_player.die().clone();
-                //
+                let (die_before, mut die_after) = {
+                    let target_player = get_player_with_number(item_preview.target_player, query);
+                    let die_before = target_player.die().clone();
+                    let die_after = die_before.clone();
+                    (die_before, die_after)
+                };
+                let user = get_player_with_number(item_preview.source_player, query);
+                user.use_item_on_die(&mut die_after, item_preview.item_index);
+                item_preview.effect = Some(ItemEffect::DieTransform(die_before, die_after));
             }
         }
     }

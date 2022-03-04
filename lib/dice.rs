@@ -48,6 +48,14 @@ pub struct WeightTransform {
     matrix: Matrix,
 }
 
+impl Clone for WeightedDie {
+    fn clone(&self) -> Self {
+        WeightedDie {
+            weights: self.weights.clone(),
+        }
+    }
+}
+
 impl WeightedDie {
     pub fn fair_die() -> Self {
         WeightedDie {
