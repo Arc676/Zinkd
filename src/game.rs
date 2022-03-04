@@ -105,6 +105,16 @@ pub struct GameState {
     game_over: bool,
 }
 
+impl GameState {
+    fn get_player_name(&self, player: u32, active: u32) -> &str {
+        if player == active {
+            "yourself"
+        } else {
+            &self.player_names[player as usize]
+        }
+    }
+}
+
 enum Control {
     Roll,
     Inventory,
@@ -576,6 +586,12 @@ fn item_preview(
     game_state: &mut ResMut<GameState>,
 ) -> ItemAction {
     let mut chosen_action = ItemAction::NoAction;
+    let target_name = game_state
+        .get_player_name(
+            game_state.item_preview.target_player,
+            game_state.item_preview.source_player,
+        )
+        .to_string();
     let item_preview = &mut game_state.item_preview;
     if item_preview.effect.is_none() {
         match item_preview.item_type {
@@ -596,12 +612,7 @@ fn item_preview(
         ui.horizontal(|ui| {
             ui.label(format!(
                 "Use {} item on {}?",
-                item_preview.item_type,
-                if item_preview.source_player == item_preview.target_player {
-                    "yourself".to_string()
-                } else {
-                    format!("Player {}", item_preview.target_player + 1)
-                }
+                item_preview.item_type, target_name
             ));
             if ui.button("Confirm").clicked() {
                 let item = {
@@ -674,23 +685,21 @@ fn inventory_window(
                 ui.collapsing(format!("{}: {}", i, item.short_description()), |ui| {
                     ui.label(item.full_description());
                     ui.horizontal(|ui| {
-                        let names = game_state.player_names.clone();
-                        let description = |num| {
-                            if num == player.player_number() {
-                                "Yourself"
-                            } else {
-                                &names[num as usize]
-                            }
-                        };
                         ui.label("Use this on");
                         egui::ComboBox::from_id_source(format!("target_picker_{}", i))
-                            .selected_text(description(game_state.item_preview.target_player))
+                            .selected_text(game_state.get_player_name(
+                                game_state.item_preview.target_player,
+                                player.player_number(),
+                            ))
                             .show_ui(ui, |ui| {
                                 for num in 0..game_state.player_count {
+                                    let name = game_state
+                                        .get_player_name(num, player.player_number())
+                                        .to_string();
                                     ui.selectable_value(
                                         &mut game_state.item_preview.target_player,
                                         num,
-                                        description(num),
+                                        name,
                                     );
                                 }
                             });
