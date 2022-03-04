@@ -247,6 +247,8 @@ fn end_turn(game_state: &mut ResMut<GameState>) {
         }
     }
     game_state.current_action = GameAction::WaitForInput;
+    game_state.item_preview = ItemUsePreview::default();
+    game_state.picked_up_item = None;
 }
 
 pub fn update_die(
