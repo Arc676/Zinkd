@@ -75,7 +75,7 @@ fn random_transfer_parameters(count: u32) -> (u32, Vec<u32>, Vec<f64>) {
     let dest = rng.gen_range(1..=6);
     for _ in 0..count {
         let mut next = rng.gen_range(1..=6);
-        while faces.contains(&next) {
+        while faces.contains(&next) || dest == next {
             next = rng.gen_range(1..=6);
         }
         faces.push(next);
