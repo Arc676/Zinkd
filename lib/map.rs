@@ -158,6 +158,9 @@ impl Map {
             let square1 = map.get_random_empty_cell();
             let item1 = random_item();
             let square2 = map.get_random_empty_cell();
+            if square1 == square2 {
+                continue;
+            }
             let item2 = random_item();
 
             map.connect_cells(square1, square2);
@@ -243,6 +246,9 @@ impl Map {
     }
 
     fn connect_cells(&mut self, start: Coordinates, end: Coordinates) {
+        if start == end {
+            return;
+        }
         let Coordinates(x0, y0) = start;
         let Coordinates(x1, y1) = end;
 
@@ -260,6 +266,11 @@ impl Map {
             };
             self.straight_path(range, true, y0);
         } else {
+            if y0 < y1 {
+                self.supplement_cell(start, NORTH);
+            } else {
+                self.supplement_cell(start, SOUTH);
+            }
             corner = 0;
         }
 
@@ -275,6 +286,7 @@ impl Map {
             };
             self.straight_path(range, false, x1);
         } else {
+            self.supplement_cell(end, corner);
             corner = 0;
         }
 
