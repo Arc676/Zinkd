@@ -35,8 +35,10 @@
 use crate::settings::GameSettings;
 use crate::AppState;
 use bevy::prelude::*;
+use bevy_egui::egui::Color32;
 use bevy_egui::{egui, EguiContext};
 use dicey_dungeons::dice::WeightedDie;
+use dicey_dungeons::items::ItemType;
 use dicey_dungeons::map::Direction;
 use dicey_dungeons::map::*;
 use dicey_dungeons::player::Player;
@@ -60,13 +62,18 @@ impl Default for GameAction {
     }
 }
 
+enum ItemEffect {
+    DieTransform(WeightedDie, WeightedDie),
+    PlayerAction(String),
+}
+
 #[derive(Default)]
 struct ItemUsePreview {
     source_player: u32,
     item_index: usize,
-    target_player: Option<u32>,
-    die_before: Option<WeightedDie>,
-    die_after: Option<WeightedDie>,
+    item_type: ItemType,
+    target_player: u32,
+    effect: Option<ItemEffect>,
 }
 
 #[derive(Default)]
@@ -385,9 +392,9 @@ pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>
     });
 }
 
-fn get_active_player<'a>(active_player: u32, query: &'a mut Query<&mut Player>) -> Mut<'a, Player> {
+fn get_player_with_number<'a>(number: u32, query: &'a mut Query<&mut Player>) -> Mut<'a, Player> {
     for player in query.iter_mut() {
-        if player.player_number() == active_player {
+        if player.player_number() == number {
             return player;
         }
     }
@@ -404,12 +411,53 @@ fn get_painter(ui: &mut egui::Ui) -> (egui::Painter, egui::emath::RectTransform)
     (painter, to_screen)
 }
 
-pub fn player_hud(
-    mut egui_context: ResMut<EguiContext>,
-    mut query: Query<&mut Player>,
-    mut game_state: ResMut<GameState>,
+fn item_preview(
+    egui_context: &mut ResMut<EguiContext>,
+    query: &mut Query<&mut Player>,
+    game_state: &mut ResMut<GameState>,
 ) {
-    let mut player = get_active_player(game_state.active_player, &mut query);
+    let item_preview = &game_state.item_preview;
+    if item_preview.effect.is_none() {
+        let target_player = get_player_with_number(item_preview.target_player, query);
+        match item_preview.item_type {
+            _ => {
+                let die_before = target_player.die().clone();
+                //
+            }
+        }
+    }
+    egui::Window::new("Item Effect").show(egui_context.ctx_mut(), |ui| {
+        match game_state.item_preview.effect.as_ref().unwrap() {
+            ItemEffect::DieTransform(before, after) => {
+                ui.label("Current weights in red. New weights in green.");
+                let (painter, to_screen) = get_painter(ui);
+                before.visualize_weights(
+                    &painter,
+                    to_screen,
+                    Color32::from_rgba_unmultiplied(255, 0, 0, 128),
+                );
+                after.visualize_weights(
+                    &painter,
+                    to_screen,
+                    Color32::from_rgba_unmultiplied(0, 255, 0, 128),
+                );
+            }
+            ItemEffect::PlayerAction(effect) => {
+                ui.label(effect);
+            }
+        }
+        if ui.button("Confirm").clicked() {
+            // use item
+        }
+    });
+}
+
+fn die_inspector(
+    egui_context: &mut ResMut<EguiContext>,
+    query: &mut Query<&mut Player>,
+    game_state: &mut ResMut<GameState>,
+) {
+    let player = get_player_with_number(game_state.active_player, query);
     egui::Window::new("Die Inspector").show(egui_context.ctx_mut(), |ui| {
         ui.heading(format!(
             "Die weights for Player {}",
@@ -434,53 +482,73 @@ pub fn player_hud(
             .die()
             .visualize_weights(&painter, to_screen, Color32::BLUE);
     });
-    if game_state.inventory_visible {
-        egui::Window::new("Inventory").show(egui_context.ctx_mut(), |ui| {
-            ui.heading(format!("Player {}'s inventory", player.player_number() + 1));
-            if player.inventory_empty() {
-                ui.label("No items");
-                return;
-            }
-            let mut used = None;
-            for (i, item) in player.items().enumerate() {
-                ui.horizontal(|ui| {
-                    ui.collapsing(item.short_description(), |ui| {
-                        ui.label(item.full_description());
-                        ui.horizontal(|ui| {
-                            ui.label("Use this on");
-                            egui::ComboBox::from_label("").show_ui(ui, |ui| {
-                                for num in 0..game_state.player_count {
-                                    ui.selectable_value(
-                                        &mut game_state.item_preview.target_player,
-                                        Some(num),
-                                        if num == player.player_number() {
-                                            "Yourself".to_string()
-                                        } else {
-                                            format!("Player {}", num + 1)
-                                        },
-                                    );
-                                }
-                            });
-                        });
-                        ui.horizontal(|ui| {
-                            if ui.button("Use item...").clicked() {
-                                used = Some(i);
+}
+
+fn inventory_window(
+    egui_context: &mut ResMut<EguiContext>,
+    query: &mut Query<&mut Player>,
+    game_state: &mut ResMut<GameState>,
+) {
+    let player = get_player_with_number(game_state.active_player, query);
+    egui::Window::new("Inventory").show(egui_context.ctx_mut(), |ui| {
+        ui.heading(format!("Player {}'s inventory", player.player_number() + 1));
+        if player.inventory_empty() {
+            ui.label("No items");
+            return;
+        }
+        let mut used = None;
+        for (i, item) in player.items().enumerate() {
+            ui.horizontal(|ui| {
+                ui.collapsing(item.short_description(), |ui| {
+                    ui.label(item.full_description());
+                    ui.horizontal(|ui| {
+                        ui.label("Use this on");
+                        egui::ComboBox::from_label("").show_ui(ui, |ui| {
+                            for num in 0..game_state.player_count {
+                                ui.selectable_value(
+                                    &mut game_state.item_preview.target_player,
+                                    num,
+                                    if num == player.player_number() {
+                                        "Yourself".to_string()
+                                    } else {
+                                        format!("Player {}", num + 1)
+                                    },
+                                );
                             }
                         });
                     });
+                    ui.horizontal(|ui| {
+                        if ui.button("Use item...").clicked() {
+                            used = Some(i);
+                        }
+                    });
                 });
-            }
-            if let Some(item_index) = used {
-                game_state.item_preview = ItemUsePreview {
-                    source_player: player.player_number(),
-                    item_index,
-                    target_player: game_state.item_preview.target_player,
-                    die_before: None,
-                    die_after: None,
-                };
-                game_state.current_action = GameAction::UsingItem;
-            }
-        });
+            });
+        }
+        if let Some(item_index) = used {
+            game_state.item_preview = ItemUsePreview {
+                source_player: player.player_number(),
+                item_type: player.get_item_type(item_index),
+                item_index,
+                target_player: game_state.item_preview.target_player,
+                effect: None,
+            };
+            game_state.current_action = GameAction::UsingItem;
+        }
+    });
+}
+
+pub fn player_hud(
+    mut egui_context: ResMut<EguiContext>,
+    mut query: Query<&mut Player>,
+    mut game_state: ResMut<GameState>,
+) {
+    die_inspector(&mut egui_context, &mut query, &mut game_state);
+    if let GameAction::UsingItem = game_state.current_action {
+        item_preview(&mut egui_context, &mut query, &mut game_state);
+    }
+    if game_state.inventory_visible {
+        inventory_window(&mut egui_context, &mut query, &mut game_state);
     }
 }
 

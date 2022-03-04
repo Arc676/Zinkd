@@ -55,6 +55,12 @@ pub enum ItemType {
     WeightTransferPair,
 }
 
+impl Default for ItemType {
+    fn default() -> Self {
+        ItemType::WeightTransfer
+    }
+}
+
 pub fn random_item() -> HeldItem {
     let mut rng = rand::thread_rng();
     Box::new(match rng.gen_range(0..ITEM_TYPES) {
