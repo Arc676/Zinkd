@@ -394,7 +394,7 @@ pub fn player_hud(
             "Die weights for Player {}",
             player.player_number() + 1
         ));
-        player.visualize_die(ui);
+        player.die().visualize_weights(ui);
     });
     if !game_state.inventory_visible {
         return;

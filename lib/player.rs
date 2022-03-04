@@ -36,7 +36,6 @@ use crate::dice::{WeightTransform, WeightedDie};
 use crate::items::HeldItem;
 use crate::map::{Coordinates, Direction, GridCell, Map};
 use bevy::ecs::component::Component;
-use bevy_egui::egui::Ui;
 use std::slice::Iter;
 
 #[derive(Component)]
@@ -101,8 +100,8 @@ impl Player {
         self.die.apply_transformation(transform);
     }
 
-    pub fn visualize_die(&self, ui: &mut Ui) {
-        self.die.visualize_weights(ui);
+    pub fn die(&self) -> &WeightedDie {
+        &self.die
     }
 
     pub fn roll(&self) -> u32 {
