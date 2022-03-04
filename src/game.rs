@@ -227,7 +227,13 @@ pub fn setup_game(
                         corner.clone()
                     }
                     _ => {
-                        panic!("Unknown direction {}", direction);
+                        if cfg!(debug_assertions) {
+                            dbg!("Unknown direction {}", direction);
+                            rotation = Quat::from_rotation_z(PI);
+                            goal.clone()
+                        } else {
+                            wall.clone()
+                        }
                     }
                 }
             }
