@@ -35,6 +35,7 @@
 use crate::dice::{WeightTransform, WeightedDie};
 use crate::player::Player;
 use rand::Rng;
+use std::fmt::{Display, Formatter};
 
 pub type HeldItem = Box<dyn Item>;
 pub type PossibleItem = Option<HeldItem>;
@@ -53,6 +54,16 @@ pub enum ItemType {
     WeightTransfer,
     DoubleWeightTransfer,
     WeightTransferPair,
+}
+
+impl Display for ItemType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ItemType::WeightTransfer => write!(f, "Weight Transfer"),
+            ItemType::DoubleWeightTransfer => write!(f, "2x Weight Transfer"),
+            ItemType::WeightTransferPair => write!(f, "Pair of Weight Transfers"),
+        }
+    }
 }
 
 impl Default for ItemType {
@@ -101,7 +112,7 @@ impl WeightTransfer {
             transform: WeightTransform::superimpose_pair(to, from, strength),
             short: format!("Weight transfer {} > {}", from, to),
             full: format!(
-                "Changes the weights on {1}, {2} to a weighted average favoring {2} at {0:.0}%",
+                "Changes the weights on {1} and {2} to a weighted average favoring {2} at {0:.0}%",
                 strength * 100.,
                 from,
                 to
@@ -162,12 +173,12 @@ impl WeightTransfer {
             full: format!(
                 "Performs two weighed averages: {1} and {2}, \
             favoring {1} at {0:.0}%; {4} and {5}, favoring {4} at {3:.0}%",
+                strength1 * 100.,
                 to1,
                 from1,
-                strength1 * 100.,
+                strength2 * 100.,
                 to2,
-                from2,
-                strength2 * 100.
+                from2
             ),
         }
     }
