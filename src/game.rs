@@ -65,6 +65,12 @@ enum ItemEffect {
     PlayerAction(String),
 }
 
+enum ItemAction {
+    NoAction,
+    UseItem,
+    CancelItem,
+}
+
 #[derive(Default)]
 struct ItemUsePreview {
     source_player: u32,
@@ -435,8 +441,8 @@ fn item_preview(
     egui_context: &mut ResMut<EguiContext>,
     query: &mut Query<&mut Player>,
     game_state: &mut ResMut<GameState>,
-) -> bool {
-    let mut item_used = false;
+) -> ItemAction {
+    let mut chosen_action = ItemAction::NoAction;
     let item_preview = &mut game_state.item_preview;
     if item_preview.effect.is_none() {
         match item_preview.item_type {
@@ -471,7 +477,10 @@ fn item_preview(
                 };
                 let mut target = get_player_with_number(item_preview.target_player, query);
                 item.use_item(&mut target);
-                item_used = true;
+                chosen_action = ItemAction::UseItem;
+            }
+            if ui.button("Cancel").clicked() {
+                chosen_action = ItemAction::CancelItem;
             }
         });
         match item_preview.effect.as_ref().unwrap() {
@@ -495,7 +504,7 @@ fn item_preview(
             }
         }
     });
-    item_used
+    chosen_action
 }
 
 fn die_inspector(
@@ -585,8 +594,10 @@ pub fn player_hud(
 ) {
     die_inspector(&mut egui_context, &mut query, &mut game_state);
     if let GameAction::UsingItem = game_state.current_action {
-        if item_preview(&mut egui_context, &mut query, &mut game_state) {
-            end_turn(&mut game_state);
+        match item_preview(&mut egui_context, &mut query, &mut game_state) {
+            ItemAction::NoAction => {}
+            ItemAction::UseItem => end_turn(&mut game_state),
+            ItemAction::CancelItem => game_state.current_action = GameAction::HasMoved,
         }
     }
     if game_state.inventory_visible {
