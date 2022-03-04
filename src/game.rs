@@ -37,7 +37,7 @@ use crate::AppState;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContext};
 use dicey_dungeons::dice::WeightedDie;
-use dicey_dungeons::items::ItemType;
+use dicey_dungeons::items::{ItemTooltip, ItemType};
 use dicey_dungeons::map::Direction;
 use dicey_dungeons::map::*;
 use dicey_dungeons::player::Player;
@@ -149,20 +149,22 @@ pub fn setup_game(
         let texture = match cell {
             GridCell::Wall => wall.clone(),
             GridCell::Path(direction, item) => {
-                if item.is_some() {
+                if let Some(item) = item {
                     let translation = coords_to_vec(x, y, 0.5);
-                    sprites.push(SpriteBundle {
-                        texture: item_sprite.clone(),
-                        transform: Transform {
-                            translation,
+                    commands
+                        .spawn_bundle(SpriteBundle {
+                            texture: item_sprite.clone(),
+                            transform: Transform {
+                                translation,
+                                ..Default::default()
+                            },
+                            sprite: Sprite {
+                                custom_size: Some(tile_size),
+                                ..Default::default()
+                            },
                             ..Default::default()
-                        },
-                        sprite: Sprite {
-                            custom_size: Some(tile_size),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    });
+                        })
+                        .insert(item.create_tooltip());
                 }
                 match *direction {
                     OMNIDIRECTIONAL => omnidirectional.clone(),
@@ -292,16 +294,18 @@ pub fn update_die(
 }
 
 pub fn update_game(
+    mut commands: Commands,
     mut game_state: ResMut<GameState>,
     keyboard: Res<Input<KeyCode>>,
     scaling: Res<ScalingData>,
     mut map: ResMut<Map>,
-    mut query: Query<(&mut Player, &mut Transform)>,
+    mut player_query: Query<(&mut Player, &mut Transform)>,
+    item_query: Query<(Entity, &Transform, &ItemTooltip), Without<Player>>,
 ) {
     if keyboard.just_released(KeyCode::Escape) {
         game_state.paused = !game_state.paused;
     }
-    for (mut player, mut transform) in query.iter_mut() {
+    for (mut player, mut transform) in player_query.iter_mut() {
         if game_state.active_player == player.player_number() {
             match game_state.current_action {
                 GameAction::WaitForInput => {
@@ -325,16 +329,25 @@ pub fn update_game(
                         if player.step(step, &map) {
                             let position = player.position();
                             let Coordinates(x, y) = position;
-                            transform.translation = (Vec2::new(x as f32, y as f32)
-                                * scaling.tile_size
-                                - scaling.offset)
-                                .extend(1.);
+                            let coords_to_vec = |x: usize, y: usize, z: f32| {
+                                (Vec2::new(x as f32, y as f32) * scaling.tile_size - scaling.offset)
+                                    .extend(z)
+                            };
+                            transform.translation = coords_to_vec(x, y, 1.);
                             match map.cell_at_mut(position) {
                                 GridCell::Path(_, item) if item.is_some() => {
                                     let item = item.take().unwrap();
                                     game_state.picked_up_item =
                                         Some(item.short_description().to_string());
                                     player.pick_up(item);
+                                    for (entity, item_transform, _) in item_query.iter() {
+                                        if item_transform.translation.truncate()
+                                            == transform.translation.truncate()
+                                        {
+                                            commands.entity(entity).despawn();
+                                            break;
+                                        }
+                                    }
                                 }
                                 GridCell::Goal => {
                                     game_state.winners.push(player.player_number());
