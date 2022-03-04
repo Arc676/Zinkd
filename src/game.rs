@@ -35,14 +35,12 @@
 use crate::settings::GameSettings;
 use crate::AppState;
 use bevy::prelude::*;
-use bevy_egui::egui::Color32;
 use bevy_egui::{egui, EguiContext};
 use dicey_dungeons::dice::WeightedDie;
 use dicey_dungeons::items::ItemType;
 use dicey_dungeons::map::Direction;
 use dicey_dungeons::map::*;
 use dicey_dungeons::player::Player;
-use std::cmp::min;
 
 pub struct ScalingData {
     tile_size: Vec2,
@@ -121,7 +119,7 @@ pub fn setup_game(
     let height = window.height() as i32;
     let tile_height = height / settings.map_height() as i32;
 
-    let tile_size = (min(tile_width, tile_height) / 24) * 24;
+    let tile_size = (tile_width.min(tile_height) / 24) * 24;
     let tile_size = Vec2::splat(tile_size as f32);
 
     let offset = Vec2::new(
@@ -412,11 +410,29 @@ fn get_painter(ui: &mut egui::Ui) -> (egui::Painter, egui::emath::RectTransform)
     (painter, to_screen)
 }
 
+fn die_weight_labels(painter: &egui::Painter, to_screen: egui::emath::RectTransform) {
+    use bevy_egui::egui::*;
+    for face in 1..=6 {
+        painter.text(
+            to_screen
+                * Pos2 {
+                    x: face as f32 / 7.,
+                    y: 0.1,
+                },
+            Align2::CENTER_CENTER,
+            face,
+            TextStyle::Body,
+            Color32::WHITE,
+        );
+    }
+}
+
 fn item_preview(
     egui_context: &mut ResMut<EguiContext>,
     query: &mut Query<&mut Player>,
     game_state: &mut ResMut<GameState>,
-) {
+) -> bool {
+    let mut item_used = false;
     let item_preview = &mut game_state.item_preview;
     if item_preview.effect.is_none() {
         match item_preview.item_type {
@@ -445,22 +461,29 @@ fn item_preview(
                 }
             ));
             if ui.button("Confirm").clicked() {
-                //
+                let item = {
+                    let mut user = get_player_with_number(item_preview.source_player, query);
+                    user.take_item(item_preview.item_index)
+                };
+                let mut target = get_player_with_number(item_preview.target_player, query);
+                item.use_item(&mut target);
+                item_used = true;
             }
         });
         match item_preview.effect.as_ref().unwrap() {
             ItemEffect::DieTransform(before, after) => {
                 ui.label("Lost weight in red. Gained weight in green. Yellow sections unchanged.");
                 let (painter, to_screen) = get_painter(ui);
+                die_weight_labels(&painter, to_screen);
                 before.visualize_weights(
                     &painter,
                     to_screen,
-                    Color32::from_rgba_unmultiplied(255, 0, 0, 128),
+                    egui::Color32::from_rgba_unmultiplied(255, 0, 0, 128),
                 );
                 after.visualize_weights(
                     &painter,
                     to_screen,
-                    Color32::from_rgba_unmultiplied(0, 255, 0, 128),
+                    egui::Color32::from_rgba_unmultiplied(0, 255, 0, 128),
                 );
             }
             ItemEffect::PlayerAction(effect) => {
@@ -468,6 +491,7 @@ fn item_preview(
             }
         }
     });
+    item_used
 }
 
 fn die_inspector(
@@ -481,24 +505,11 @@ fn die_inspector(
             "Die weights for Player {}",
             player.player_number() + 1
         ));
-        use bevy_egui::egui::*;
         let (painter, to_screen) = get_painter(ui);
-        for face in 1..=6 {
-            painter.text(
-                to_screen
-                    * Pos2 {
-                        x: face as f32 / 7.,
-                        y: 0.1,
-                    },
-                Align2::CENTER_CENTER,
-                face,
-                TextStyle::Body,
-                Color32::WHITE,
-            );
-        }
+        die_weight_labels(&painter, to_screen);
         player
             .die()
-            .visualize_weights(&painter, to_screen, Color32::BLUE);
+            .visualize_weights(&painter, to_screen, egui::Color32::BLUE);
     });
 }
 
@@ -568,7 +579,9 @@ pub fn player_hud(
 ) {
     die_inspector(&mut egui_context, &mut query, &mut game_state);
     if let GameAction::UsingItem = game_state.current_action {
-        item_preview(&mut egui_context, &mut query, &mut game_state);
+        if item_preview(&mut egui_context, &mut query, &mut game_state) {
+            end_turn(&mut game_state);
+        }
     }
     if game_state.inventory_visible {
         inventory_window(&mut egui_context, &mut query, &mut game_state);

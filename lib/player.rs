@@ -90,10 +90,9 @@ impl Player {
         self.inventory.iter()
     }
 
-    pub fn use_item_on_player(&mut self, target: &mut Player, index: usize) {
+    pub fn take_item(&mut self, index: usize) -> HeldItem {
         debug_assert!(index < self.inventory.len());
-        let item = self.inventory.remove(index);
-        item.use_item(target);
+        self.inventory.remove(index)
     }
 
     pub fn use_item_on_die(&self, die: &mut WeightedDie, index: usize) {
