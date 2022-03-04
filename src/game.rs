@@ -365,7 +365,9 @@ pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>
         match game_state.current_action {
             GameAction::WaitForInput => {
                 ui.label("Press R to roll");
-                ui.label("Press E to view your inventory");
+                ui.label(
+                    "Press E to view your inventory (note that you cannot use items at this time)",
+                );
             }
             GameAction::UsingItem => {
                 ui.label("Consult the item preview to see what the item will do.");
@@ -385,9 +387,9 @@ pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>
                     if let Some(description) = &game_state.picked_up_item {
                         ui.label(format!("You picked up an item: {}", description));
                     }
-                    ui.label("Press E to view your inventory.");
+                    ui.label("Press E to view your inventory (you may now use items)");
                 }
-                ui.label("Press Enter to end your turn.");
+                ui.label("Press Enter to end your turn");
             }
         }
     });
@@ -553,11 +555,13 @@ fn inventory_window(
                                 }
                             });
                     });
-                    ui.horizontal(|ui| {
-                        if ui.button("Use item...").clicked() {
-                            used = Some(i);
-                        }
-                    });
+                    if let GameAction::HasMoved = game_state.current_action {
+                        ui.horizontal(|ui| {
+                            if ui.button("Use item...").clicked() {
+                                used = Some(i);
+                            }
+                        });
+                    }
                 });
             });
         }
