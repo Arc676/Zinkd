@@ -394,7 +394,29 @@ pub fn player_hud(
             "Die weights for Player {}",
             player.player_number() + 1
         ));
-        player.die().visualize_weights(ui);
+        use bevy_egui::egui::*;
+        let (response, painter) =
+            ui.allocate_painter(ui.available_size_before_wrap(), Sense::click());
+        let to_screen = emath::RectTransform::from_to(
+            Rect::from_min_size(Pos2::ZERO, response.rect.square_proportions()),
+            response.rect,
+        );
+        for face in 1..=6 {
+            painter.text(
+                to_screen
+                    * Pos2 {
+                        x: face as f32 / 7.,
+                        y: 0.1,
+                    },
+                Align2::CENTER_CENTER,
+                face,
+                TextStyle::Body,
+                Color32::WHITE,
+            );
+        }
+        player
+            .die()
+            .visualize_weights(&painter, to_screen, Color32::BLUE);
     });
     if !game_state.inventory_visible {
         return;
