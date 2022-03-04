@@ -383,6 +383,16 @@ fn get_active_player<'a>(active_player: u32, query: &'a mut Query<&mut Player>) 
     panic!("No active player");
 }
 
+fn get_painter(ui: &mut egui::Ui) -> (egui::Painter, egui::emath::RectTransform) {
+    use bevy_egui::egui::*;
+    let (response, painter) = ui.allocate_painter(ui.available_size_before_wrap(), Sense::click());
+    let to_screen = emath::RectTransform::from_to(
+        Rect::from_min_size(Pos2::ZERO, response.rect.square_proportions()),
+        response.rect,
+    );
+    (painter, to_screen)
+}
+
 pub fn player_hud(
     mut egui_context: ResMut<EguiContext>,
     mut query: Query<&mut Player>,
@@ -395,12 +405,7 @@ pub fn player_hud(
             player.player_number() + 1
         ));
         use bevy_egui::egui::*;
-        let (response, painter) =
-            ui.allocate_painter(ui.available_size_before_wrap(), Sense::click());
-        let to_screen = emath::RectTransform::from_to(
-            Rect::from_min_size(Pos2::ZERO, response.rect.square_proportions()),
-            response.rect,
-        );
+        let (painter, to_screen) = get_painter(ui);
         for face in 1..=6 {
             painter.text(
                 to_screen
