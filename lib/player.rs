@@ -76,11 +76,20 @@ impl Player {
 
     pub fn step(&mut self, direction: Direction, map: &Map) -> bool {
         let mut current = self.position;
+        match map.cell_at(current) {
+            GridCell::Wall => panic!("Somehow the player is in a wall"),
+            GridCell::Path(exits, _) => {
+                if direction & exits == 0 {
+                    return false;
+                }
+            }
+            GridCell::Goal => {}
+        }
         if !current.step(direction, map.width(), map.height()) {
             return false;
         }
         match map.cell_at(current) {
-            GridCell::Wall => false,
+            GridCell::Wall => panic!("Path allowed walking into a wall"),
             _ => {
                 self.position = current;
                 true
