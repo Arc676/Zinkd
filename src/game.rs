@@ -42,6 +42,7 @@ use dicey_dungeons::items::ItemType;
 use dicey_dungeons::map::Direction;
 use dicey_dungeons::map::*;
 use dicey_dungeons::player::Player;
+use std::f32::consts::{FRAC_PI_2, PI};
 
 #[derive(Component)]
 pub struct MainCamera;
@@ -92,6 +93,7 @@ pub struct GameState {
     player_count: u32,
     paused: bool,
     active_player: u32,
+    player_names: Vec<String>,
     current_action: GameAction,
     hover_item: Option<String>,
     item_preview: ItemUsePreview,
@@ -99,6 +101,7 @@ pub struct GameState {
     picked_up_item: Option<String>,
     rolled_value: Option<u32>,
     winners: Vec<u32>,
+    winner_names: Vec<String>,
     game_over: bool,
 }
 
@@ -145,8 +148,10 @@ pub fn setup_game(
         |x: usize, y: usize, z: f32| (Vec2::new(x as f32, y as f32) * tile_size - offset).extend(z);
     commands.insert_resource(ScalingData { tile_size, offset });
 
-    let longitudinal = asset_server.load("tiles/tile_straight.png");
-    let latitudinal = asset_server.load("tiles/tile_straight_h.png");
+    let straight = asset_server.load("tiles/tile_straight.png");
+    let dead_end = asset_server.load("tiles/tile_dead_end.png");
+    let corner = asset_server.load("tiles/tile_corner.png");
+    let t_intersection = asset_server.load("tiles/tile_cross1.png");
     let omnidirectional = asset_server.load("tiles/tile_cross2.png");
     let wall = asset_server.load("tiles/tile_wall.png");
     let goal = asset_server.load("sprites/goal.png");
@@ -155,6 +160,7 @@ pub fn setup_game(
 
     let mut sprites = vec![];
     for (Coordinates(x, y), cell) in map.iter() {
+        let mut rotation = Quat::IDENTITY;
         let texture = match cell {
             GridCell::Wall => wall.clone(),
             GridCell::Path(direction, item) => {
@@ -177,8 +183,39 @@ pub fn setup_game(
                 }
                 match *direction {
                     OMNIDIRECTIONAL => omnidirectional.clone(),
-                    LONGITUDINAL => longitudinal.clone(),
-                    LATITUDINAL => latitudinal.clone(),
+                    LONGITUDINAL | LATITUDINAL => {
+                        if *direction == LATITUDINAL {
+                            rotation = Quat::from_rotation_z(FRAC_PI_2);
+                        }
+                        straight.clone()
+                    }
+                    NORTH | EAST | SOUTH | WEST => {
+                        match *direction {
+                            NORTH => rotation = Quat::from_rotation_z(PI),
+                            EAST => rotation = Quat::from_rotation_z(FRAC_PI_2),
+                            WEST => rotation = Quat::from_rotation_z(-FRAC_PI_2),
+                            _ => (),
+                        }
+                        dead_end.clone()
+                    }
+                    NOT_NORTH | NOT_EAST | NOT_SOUTH | NOT_WEST => {
+                        match *direction {
+                            NOT_NORTH => rotation = Quat::from_rotation_z(-FRAC_PI_2),
+                            NOT_SOUTH => rotation = Quat::from_rotation_z(FRAC_PI_2),
+                            NOT_EAST => rotation = Quat::from_rotation_z(PI),
+                            _ => (),
+                        }
+                        t_intersection.clone()
+                    }
+                    NORTHEAST | NORTHWEST | SOUTHEAST | SOUTHWEST => {
+                        match *direction {
+                            NORTHEAST => rotation = Quat::from_rotation_z(PI),
+                            NORTHWEST => rotation = Quat::from_rotation_z(-FRAC_PI_2),
+                            SOUTHEAST => rotation = Quat::from_rotation_z(FRAC_PI_2),
+                            _ => (),
+                        }
+                        corner.clone()
+                    }
                     _ => panic!("Unknown direction"),
                 }
             }
@@ -189,6 +226,7 @@ pub fn setup_game(
             texture,
             transform: Transform {
                 translation,
+                rotation,
                 ..Default::default()
             },
             sprite: Sprite {
@@ -200,6 +238,7 @@ pub fn setup_game(
     }
     commands.spawn_batch(sprites);
 
+    let mut player_names = vec![];
     for (num, ((sprite, name), spawn_pos)) in settings
         .player_sprites_iter()
         .zip(settings.player_names_iter())
@@ -207,6 +246,7 @@ pub fn setup_game(
         .enumerate()
     {
         let Coordinates(x, y) = spawn_pos;
+        player_names.push(name.clone());
         let player = Player::spawn_at(*spawn_pos, name.clone(), num as u32);
 
         let texture = asset_server.load(sprite.path());
@@ -246,6 +286,7 @@ pub fn setup_game(
 
     commands.insert_resource(GameState {
         player_count: settings.players(),
+        player_names,
         ..Default::default()
     });
 }
@@ -396,6 +437,7 @@ pub fn update_game(
                                 }
                                 GridCell::Goal => {
                                     game_state.winners.push(player.player_number());
+                                    game_state.winner_names.push(player.name().to_string());
                                     game_state.current_action = GameAction::HasMoved;
                                     break;
                                 }
@@ -439,12 +481,15 @@ pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>
         if game_state.game_over {
             ui.heading("Game over!");
             ui.label("Leaderboard:");
-            for (place, winner) in game_state.winners.iter().enumerate() {
-                ui.label(format!("{}: Player {}", place + 1, winner + 1));
+            for (place, winner) in game_state.winner_names.iter().enumerate() {
+                ui.label(format!("{}: {}", place + 1, winner));
             }
             return;
         }
-        ui.heading(format!("Player {}'s turn", game_state.active_player + 1));
+        ui.heading(format!(
+            "{}'s turn",
+            game_state.player_names[game_state.active_player as usize]
+        ));
         match game_state.current_action {
             GameAction::WaitForInput => {
                 ui.label("Press R to roll");
@@ -600,10 +645,7 @@ fn die_inspector(
 ) {
     let player = get_player_with_number(game_state.active_player, query);
     egui::Window::new("Die Inspector").show(egui_context.ctx_mut(), |ui| {
-        ui.heading(format!(
-            "Die weights for Player {}",
-            player.player_number() + 1
-        ));
+        ui.heading(format!("Die weights for {}", player.name()));
         let (painter, to_screen) = get_painter(ui);
         die_weight_labels(&painter, to_screen);
         player
@@ -619,7 +661,7 @@ fn inventory_window(
 ) {
     let player = get_player_with_number(game_state.active_player, query);
     egui::Window::new("Inventory").show(egui_context.ctx_mut(), |ui| {
-        ui.heading(format!("Player {}'s inventory", player.player_number() + 1));
+        ui.heading(format!("{}'s inventory", player.name()));
         if player.inventory_empty() {
             ui.label("No items");
             return;
@@ -630,11 +672,12 @@ fn inventory_window(
                 ui.collapsing(item.short_description(), |ui| {
                     ui.label(item.full_description());
                     ui.horizontal(|ui| {
+                        let names = game_state.player_names.clone();
                         let description = |num| {
                             if num == player.player_number() {
-                                "Yourself".to_string()
+                                "Yourself"
                             } else {
-                                format!("Player {}", num + 1)
+                                &names[num as usize]
                             }
                         };
                         ui.label("Use this on");

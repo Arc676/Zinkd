@@ -41,10 +41,22 @@ pub type Direction = u8;
 pub const NORTH: u8 = 1 << 0;
 pub const SOUTH: u8 = 1 << 1;
 pub const LONGITUDINAL: u8 = NORTH | SOUTH;
+
 pub const EAST: u8 = 1 << 2;
 pub const WEST: u8 = 1 << 3;
 pub const LATITUDINAL: u8 = EAST | WEST;
+
 pub const OMNIDIRECTIONAL: u8 = LONGITUDINAL | LATITUDINAL;
+
+pub const NOT_NORTH: u8 = LATITUDINAL | SOUTH;
+pub const NOT_SOUTH: u8 = LATITUDINAL | NORTH;
+pub const NOT_EAST: u8 = LONGITUDINAL | WEST;
+pub const NOT_WEST: u8 = LONGITUDINAL | EAST;
+
+pub const NORTHEAST: u8 = NORTH | EAST;
+pub const SOUTHEAST: u8 = SOUTH | EAST;
+pub const NORTHWEST: u8 = NORTH | WEST;
+pub const SOUTHWEST: u8 = SOUTH | WEST;
 
 pub fn directions_are_opposite(a: Direction, b: Direction) -> bool {
     match a {
@@ -62,7 +74,7 @@ pub enum GridCell {
     Goal,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct Coordinates(pub usize, pub usize);
 
 impl Coordinates {
@@ -143,11 +155,9 @@ impl Map {
         let total_squares = (map_width * map_height) as f64;
         let item_squares = (total_squares * item_density).round() as usize;
         for _ in 0..(item_squares / 2) {
-            let square1 = map.get_random_cell_excluding_goal();
-            map.supplement_cell(square1, OMNIDIRECTIONAL);
+            let square1 = map.get_random_empty_cell();
             let item1 = random_item();
-            let square2 = map.get_random_cell_excluding_goal();
-            map.supplement_cell(square2, OMNIDIRECTIONAL);
+            let square2 = map.get_random_empty_cell();
             let item2 = random_item();
 
             map.connect_cells(square1, square2);
@@ -178,7 +188,7 @@ impl Map {
             GridCell::Path(existing, _) => {
                 *existing |= direction;
             }
-            GridCell::Goal => panic!("Cannot supplement goal cell"),
+            GridCell::Goal => (),
         }
     }
 
@@ -190,10 +200,19 @@ impl Map {
         self.grid.len()
     }
 
-    fn get_random_cell_excluding_goal(&self) -> Coordinates {
+    fn get_random_empty_cell(&self) -> Coordinates {
         let mut cell = self.get_random_cell();
-        while let GridCell::Goal = self.cell_at(cell) {
-            cell = self.get_random_cell();
+        loop {
+            match self.cell_at(cell) {
+                GridCell::Goal => {}
+                _ => {
+                    if self.starting_points.contains(&cell) {
+                        cell = self.get_random_cell();
+                    } else {
+                        break;
+                    }
+                }
+            }
         }
         cell
     }
@@ -227,25 +246,39 @@ impl Map {
         let Coordinates(x0, y0) = start;
         let Coordinates(x1, y1) = end;
 
-        let mut corner = true;
+        let mut corner = 0;
 
         if x0 != x1 {
-            let range = if x0 < x1 { (x0 + 1)..x1 } else { (x1 + 1)..x0 };
+            let range = if x0 < x1 {
+                self.supplement_cell(start, EAST);
+                corner |= WEST;
+                (x0 + 1)..x1
+            } else {
+                self.supplement_cell(start, WEST);
+                corner |= EAST;
+                (x1 + 1)..x0
+            };
             self.straight_path(range, true, y0);
         } else {
-            corner = false;
+            corner = 0;
         }
 
         if y0 != y1 {
-            let range = if y0 < y1 { (y0 + 1)..y1 } else { (y1 + 1)..y0 };
+            let range = if y0 < y1 {
+                self.supplement_cell(end, SOUTH);
+                corner |= NORTH;
+                (y0 + 1)..y1
+            } else {
+                self.supplement_cell(end, NORTH);
+                corner |= SOUTH;
+                (y1 + 1)..y0
+            };
             self.straight_path(range, false, x1);
         } else {
-            corner = false;
+            corner = 0;
         }
 
-        if corner {
-            self.supplement_cell(Coordinates(x1, y0), OMNIDIRECTIONAL);
-        }
+        self.supplement_cell(Coordinates(x1, y0), corner);
     }
 
     fn straight_path<R>(&mut self, range: R, x_range: bool, fixed_coord: usize)
@@ -259,10 +292,7 @@ impl Map {
                 Coordinates(fixed_coord, coord)
             };
             let direction = if x_range { EAST | WEST } else { NORTH | SOUTH };
-            match self.cell_at(node) {
-                GridCell::Goal => (),
-                _ => self.supplement_cell(node, direction),
-            }
+            self.supplement_cell(node, direction);
         }
     }
 
