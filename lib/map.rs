@@ -144,8 +144,10 @@ impl Map {
         let item_squares = (total_squares * item_density).round() as usize;
         for _ in 0..(item_squares / 2) {
             let square1 = map.get_random_cell();
+            map.supplement_cell(square1, OMNIDIRECTIONAL);
             let item1 = random_item();
             let square2 = map.get_random_cell();
+            map.supplement_cell(square2, OMNIDIRECTIONAL);
             let item2 = random_item();
 
             map.connect_cells(square1, square2);
@@ -157,11 +159,11 @@ impl Map {
     }
 
     fn place_item(&mut self, coordinates: Coordinates, item: HeldItem) {
-        let Coordinates(x, y) = coordinates;
-        if let GridCell::Path(_, cell) = &mut self.grid[y][x] {
+        if let GridCell::Path(_, cell) = self.cell_at_mut(coordinates) {
             cell.replace(item);
+        } else {
+            panic!("Cannot place item on non-path square");
         }
-        panic!("Cannot place item on non-path square");
     }
 
     fn set_cell(&mut self, coordinates: Coordinates, cell: GridCell) {
@@ -234,7 +236,7 @@ impl Map {
         }
 
         if corner {
-            self.supplement_cell(Coordinates(x1, y0), NORTH | EAST | SOUTH | WEST);
+            self.supplement_cell(Coordinates(x1, y0), OMNIDIRECTIONAL);
         }
     }
 
