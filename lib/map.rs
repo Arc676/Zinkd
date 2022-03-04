@@ -33,6 +33,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 use crate::items;
+use crate::items::{random_item, HeldItem};
 use rand::Rng;
 use std::slice::Iter;
 
@@ -143,11 +144,24 @@ impl Map {
         let item_squares = (total_squares * item_density).round() as usize;
         for _ in 0..(item_squares / 2) {
             let square1 = map.get_random_cell();
+            let item1 = random_item();
             let square2 = map.get_random_cell();
+            let item2 = random_item();
+
             map.connect_cells(square1, square2);
+            map.place_item(square1, item1);
+            map.place_item(square2, item2);
         }
 
         map
+    }
+
+    fn place_item(&mut self, coordinates: Coordinates, item: HeldItem) {
+        let Coordinates(x, y) = coordinates;
+        if let GridCell::Path(_, cell) = &mut self.grid[y][x] {
+            cell.replace(item);
+        }
+        panic!("Cannot place item on non-path square");
     }
 
     fn set_cell(&mut self, coordinates: Coordinates, cell: GridCell) {
