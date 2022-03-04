@@ -41,10 +41,22 @@ pub type Direction = u8;
 pub const NORTH: u8 = 1 << 0;
 pub const SOUTH: u8 = 1 << 1;
 pub const LONGITUDINAL: u8 = NORTH | SOUTH;
+
 pub const EAST: u8 = 1 << 2;
 pub const WEST: u8 = 1 << 3;
 pub const LATITUDINAL: u8 = EAST | WEST;
+
 pub const OMNIDIRECTIONAL: u8 = LONGITUDINAL | LATITUDINAL;
+
+pub const NOT_NORTH: u8 = LATITUDINAL | SOUTH;
+pub const NOT_SOUTH: u8 = LATITUDINAL | NORTH;
+pub const NOT_EAST: u8 = LONGITUDINAL | WEST;
+pub const NOT_WEST: u8 = LONGITUDINAL | EAST;
+
+pub const NORTHEAST: u8 = NORTH | EAST;
+pub const SOUTHEAST: u8 = SOUTH | EAST;
+pub const NORTHWEST: u8 = NORTH | WEST;
+pub const SOUTHWEST: u8 = SOUTH | WEST;
 
 pub fn directions_are_opposite(a: Direction, b: Direction) -> bool {
     match a {

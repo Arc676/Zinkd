@@ -42,6 +42,7 @@ use dicey_dungeons::items::ItemType;
 use dicey_dungeons::map::Direction;
 use dicey_dungeons::map::*;
 use dicey_dungeons::player::Player;
+use std::f32::consts::{FRAC_PI_2, PI};
 
 #[derive(Component)]
 pub struct MainCamera;
@@ -147,8 +148,10 @@ pub fn setup_game(
         |x: usize, y: usize, z: f32| (Vec2::new(x as f32, y as f32) * tile_size - offset).extend(z);
     commands.insert_resource(ScalingData { tile_size, offset });
 
-    let longitudinal = asset_server.load("tiles/tile_straight.png");
-    let latitudinal = asset_server.load("tiles/tile_straight_h.png");
+    let straight = asset_server.load("tiles/tile_straight.png");
+    let dead_end = asset_server.load("tiles/tile_dead_end.png");
+    let corner = asset_server.load("tiles/tile_corner.png");
+    let t_intersection = asset_server.load("tiles/tile_cross1.png");
     let omnidirectional = asset_server.load("tiles/tile_cross2.png");
     let wall = asset_server.load("tiles/tile_wall.png");
     let goal = asset_server.load("sprites/goal.png");
@@ -157,6 +160,7 @@ pub fn setup_game(
 
     let mut sprites = vec![];
     for (Coordinates(x, y), cell) in map.iter() {
+        let mut rotation = Quat::IDENTITY;
         let texture = match cell {
             GridCell::Wall => wall.clone(),
             GridCell::Path(direction, item) => {
@@ -179,8 +183,39 @@ pub fn setup_game(
                 }
                 match *direction {
                     OMNIDIRECTIONAL => omnidirectional.clone(),
-                    LONGITUDINAL => longitudinal.clone(),
-                    LATITUDINAL => latitudinal.clone(),
+                    LONGITUDINAL | LATITUDINAL => {
+                        if *direction == LATITUDINAL {
+                            rotation = Quat::from_rotation_z(FRAC_PI_2);
+                        }
+                        straight.clone()
+                    }
+                    NORTH | EAST | SOUTH | WEST => {
+                        match *direction {
+                            NORTH => rotation = Quat::from_rotation_z(PI),
+                            EAST => rotation = Quat::from_rotation_z(FRAC_PI_2),
+                            WEST => rotation = Quat::from_rotation_z(-FRAC_PI_2),
+                            _ => (),
+                        }
+                        dead_end.clone()
+                    }
+                    NOT_NORTH | NOT_EAST | NOT_SOUTH | NOT_WEST => {
+                        match *direction {
+                            NOT_NORTH => rotation = Quat::from_rotation_z(-FRAC_PI_2),
+                            NOT_SOUTH => rotation = Quat::from_rotation_z(FRAC_PI_2),
+                            NOT_EAST => rotation = Quat::from_rotation_z(PI),
+                            _ => (),
+                        }
+                        t_intersection.clone()
+                    }
+                    NORTHEAST | NORTHWEST | SOUTHEAST | SOUTHWEST => {
+                        match *direction {
+                            NORTHEAST => rotation = Quat::from_rotation_z(PI),
+                            NORTHWEST => rotation = Quat::from_rotation_z(-FRAC_PI_2),
+                            SOUTHEAST => rotation = Quat::from_rotation_z(FRAC_PI_2),
+                            _ => (),
+                        }
+                        corner.clone()
+                    }
                     _ => panic!("Unknown direction"),
                 }
             }
@@ -191,6 +226,7 @@ pub fn setup_game(
             texture,
             transform: Transform {
                 translation,
+                rotation,
                 ..Default::default()
             },
             sprite: Sprite {
