@@ -142,16 +142,35 @@ pub fn setup_game(
     let wall = asset_server.load("tiles/tile_wall.png");
     let goal = asset_server.load("sprites/goal.png");
 
+    let item_sprite = asset_server.load("sprites/item_weight.png");
+
     let mut sprites = vec![];
     for (Coordinates(x, y), cell) in map.iter() {
         let texture = match cell {
             GridCell::Wall => wall.clone(),
-            GridCell::Path(direction, _) => match *direction {
-                OMNIDIRECTIONAL => omnidirectional.clone(),
-                LONGITUDINAL => longitudinal.clone(),
-                LATITUDINAL => latitudinal.clone(),
-                _ => panic!("Unknown direction"),
-            },
+            GridCell::Path(direction, item) => {
+                if item.is_some() {
+                    let translation = coords_to_vec(x, y, 0.5);
+                    sprites.push(SpriteBundle {
+                        texture: item_sprite.clone(),
+                        transform: Transform {
+                            translation,
+                            ..Default::default()
+                        },
+                        sprite: Sprite {
+                            custom_size: Some(tile_size),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    });
+                }
+                match *direction {
+                    OMNIDIRECTIONAL => omnidirectional.clone(),
+                    LONGITUDINAL => longitudinal.clone(),
+                    LATITUDINAL => latitudinal.clone(),
+                    _ => panic!("Unknown direction"),
+                }
+            }
             GridCell::Goal => goal.clone(),
         };
         let translation = coords_to_vec(x, y, 0.);
