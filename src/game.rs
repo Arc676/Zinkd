@@ -34,6 +34,7 @@
 
 use crate::settings::GameSettings;
 use crate::AppState;
+use bevy::ecs::component::Component;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContext};
 use dicey_dungeons::dice::WeightedDie;
@@ -41,6 +42,9 @@ use dicey_dungeons::items::{ItemTooltip, ItemType};
 use dicey_dungeons::map::Direction;
 use dicey_dungeons::map::*;
 use dicey_dungeons::player::Player;
+
+#[derive(Component)]
+pub struct MainCamera;
 
 pub struct ScalingData {
     tile_size: Vec2,
@@ -86,6 +90,7 @@ pub struct GameState {
     paused: bool,
     active_player: u32,
     current_action: GameAction,
+    hover_item: Option<String>,
     item_preview: ItemUsePreview,
     inventory_visible: bool,
     picked_up_item: Option<String>,
@@ -110,7 +115,8 @@ pub fn setup_game(
 ) {
     commands
         .spawn()
-        .insert_bundle(OrthographicCameraBundle::new_2d());
+        .insert_bundle(OrthographicCameraBundle::new_2d())
+        .insert(MainCamera);
     let map = Map::generate_random_map(
         settings.map_width(),
         settings.map_height(),
@@ -275,6 +281,7 @@ fn end_turn(game_state: &mut ResMut<GameState>) {
     }
     game_state.current_action = GameAction::WaitForInput;
     game_state.item_preview = ItemUsePreview::default();
+    game_state.hover_item = None;
     game_state.picked_up_item = None;
 }
 
@@ -291,6 +298,38 @@ pub fn update_die(
             }
         }
     }
+}
+
+pub fn item_tooltips(
+    mut game_state: ResMut<GameState>,
+    scaling_data: Res<ScalingData>,
+    windows: Res<Windows>,
+    camera_query: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+    item_query: Query<(&GlobalTransform, &ItemTooltip), Without<Player>>,
+) {
+    // https://bevy-cheatbook.github.io/cookbook/cursor2world.html
+    let (camera, camera_transform) = camera_query.single();
+
+    let threshold = scaling_data.tile_size.length() / 2.;
+
+    let wnd = windows.get(camera.window).unwrap();
+
+    if let Some(screen_pos) = wnd.cursor_position() {
+        let window_size = Vec2::new(wnd.width() as f32, wnd.height() as f32);
+
+        // convert screen position [0..resolution] to ndc [-1..1] (gpu coordinates)
+        let ndc = (screen_pos / window_size) * 2.0 - Vec2::ONE;
+        let ndc_to_world = camera_transform.compute_matrix() * camera.projection_matrix.inverse();
+        let world_pos = ndc_to_world.project_point3(ndc.extend(-1.0)).truncate();
+
+        for (transform, ItemTooltip(description)) in item_query.iter() {
+            if world_pos.distance(transform.translation.truncate()) < threshold {
+                game_state.hover_item = Some(description.clone());
+                return;
+            }
+        }
+    }
+    game_state.hover_item = None;
 }
 
 pub fn update_game(
@@ -429,6 +468,15 @@ pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>
                 }
                 ui.label("Press Enter to end your turn");
             }
+        }
+
+        let sep = egui::Separator::default().spacing(12.).horizontal();
+        ui.add(sep);
+
+        if let Some(description) = &game_state.hover_item {
+            ui.label(description);
+        } else {
+            ui.label("Hover over an item to see its description");
         }
     });
 }

@@ -54,7 +54,7 @@ pub trait Item: Send + Sync {
 }
 
 #[derive(Component)]
-pub struct ItemTooltip(String);
+pub struct ItemTooltip(pub String);
 
 const ITEM_TYPES: u32 = 3;
 #[derive(Copy, Clone)]
