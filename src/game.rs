@@ -93,7 +93,6 @@ pub struct GameState {
 enum Control {
     Roll,
     Inventory,
-    UseItem(usize),
     Move(Direction),
     EndTurn,
 }
@@ -332,7 +331,6 @@ pub fn update_game(
                 GameAction::HasMoved => {
                     if let Some(action) = get_control(&keyboard) {
                         match action {
-                            Control::UseItem(_) => {}
                             Control::Inventory => {
                                 game_state.inventory_visible = !game_state.inventory_visible
                             }
