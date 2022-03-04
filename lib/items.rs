@@ -167,18 +167,18 @@ impl WeightTransfer {
             transform: WeightTransform::superimpose_pair(to1, from1, strength1)
                 .combined_with(&WeightTransform::superimpose_pair(to2, from2, strength2)),
             short: format!(
-                "Weight transfers {} > {} and {} > {}",
-                from1, to1, from2, to2
+                "Weight transfers {} > {} and then {} > {}",
+                from2, to2, from1, to1
             ),
             full: format!(
                 "Performs two weighed averages: {1} and {2}, \
-            favoring {1} at {0:.0}%; {4} and {5}, favoring {4} at {3:.0}%",
-                strength1 * 100.,
-                to1,
-                from1,
+            favoring {1} at {0:.0}%; then {4} and {5}, favoring {4} at {3:.0}%",
                 strength2 * 100.,
                 to2,
-                from2
+                from2,
+                strength1 * 100.,
+                to1,
+                from1
             ),
         }
     }
