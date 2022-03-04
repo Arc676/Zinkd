@@ -343,13 +343,13 @@ pub fn update_game(
     keyboard: Res<Input<KeyCode>>,
     scaling: Res<ScalingData>,
     mut map: ResMut<Map>,
-    mut player_query: Query<(&mut Player, &mut Transform)>,
+    mut player_query: Query<(&mut Player, &mut Transform, &mut Sprite)>,
     item_query: Query<(Entity, &Transform, &EntityTooltip), Without<Player>>,
 ) {
     if keyboard.just_released(KeyCode::Escape) {
         game_state.paused = !game_state.paused;
     }
-    for (mut player, mut transform) in player_query.iter_mut() {
+    for (mut player, mut transform, mut sprite) in player_query.iter_mut() {
         if game_state.active_player == player.player_number() {
             match game_state.current_action {
                 GameAction::WaitForInput => {
@@ -378,6 +378,7 @@ pub fn update_game(
                                     .extend(z)
                             };
                             transform.translation = coords_to_vec(x, y, 1.);
+                            sprite.flip_x = step == WEST;
                             match map.cell_at_mut(position) {
                                 GridCell::Path(_, item) if item.is_some() => {
                                     let item = item.take().unwrap();
