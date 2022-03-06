@@ -1,0 +1,16 @@
+/target
+Cargo.lock
+*.iml
+.idea/
+math/
+marketing/
+assets
+Cargo.lock
+Cargo.toml
+Dicey_Dungeons.iml
+lib
+licenses
+README.md
+src
+target
+updateAssets.sh
