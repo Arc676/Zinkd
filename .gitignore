@@ -4,7 +4,8 @@ Cargo.lock
 .idea/
 math/
 marketing/
-assets
+*.xcf
+*.aseprite
 Cargo.lock
 Cargo.toml
 Dicey_Dungeons.iml
