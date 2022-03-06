@@ -2,7 +2,41 @@
 <html lang="en">
 <title>Dicey Dungeons</title>
 <head>
-	<link rel="stylesheet" href="/mainstyles.css">
+	<style>
+		table {
+			border-collapse: collapse;
+			width: 100%;
+		}
+
+		td, th {
+			border: 1px solid #cccccc;
+			text-align: center;
+			padding: 8px;
+		}
+
+		tr:nth-child(even) {
+			background-color: #dddddd;
+		}
+
+		body {
+			font-family: Arial, Helvetica, sans-serif;
+			color: black;
+			padding-left: 11em;
+			margin-bottom:100px;
+			display:block;
+		}
+
+		div.footer {
+			position:fixed;
+			bottom:0;
+			right: 0;
+			left: 0;
+			padding: 1rem;
+			
+			background-color: #efefef;
+			text-align: center;
+		}
+	</style>
 </head>
 <script type="module">
 	import init from './Dicey\ Dungeons.js'
