@@ -101,6 +101,7 @@ pub struct GameState {
     game_over: bool,
     camera_follows_player: bool,
     camera_auto_zoom: bool,
+    camera_zoom: f32,
 }
 
 impl GameState {
@@ -512,6 +513,7 @@ pub fn scroll_game(
             .extend(pos.translation.z);
 
         game_state.camera_auto_zoom = false;
+        game_state.camera_zoom = cam.scale;
     }
     if tr.length_squared() > 0.0 {
         let s = Vec2::new(
@@ -607,6 +609,9 @@ pub fn game_ui(mut game_state: ResMut<GameState>, mut egui_context: ResMut<EguiC
             &mut game_state.camera_auto_zoom,
             "Automatically set camera zoom level",
         );
+        if !game_state.camera_auto_zoom {
+            ui.label(format!("Current zoom level: {:.2}", game_state.camera_zoom));
+        }
     });
 }
 
