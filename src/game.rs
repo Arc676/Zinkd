@@ -100,6 +100,7 @@ pub struct GameState {
     winner_names: Vec<String>,
     game_over: bool,
     camera_follows_player: bool,
+    camera_auto_zoom: bool,
 }
 
 impl GameState {
@@ -289,6 +290,7 @@ pub fn setup_game(
         player_count: settings.players(),
         player_names,
         camera_follows_player: true,
+        camera_auto_zoom: true,
         ..Default::default()
     });
 }
@@ -492,7 +494,7 @@ pub fn scroll_game(
         None => return,
     };
 
-    if input_mouse.pressed(MouseButton::Left) {
+    if input_mouse.pressed(MouseButton::Left) && !input_mouse.just_pressed(MouseButton::Left) {
         tr = cursor_position - prev.unwrap_or(cursor_position);
     }
 
@@ -508,6 +510,8 @@ pub fn scroll_game(
         pos.translation = (mouse_world_pos
             - mouse_normalized_screen_pos * Vec2::new(cam.right, cam.top) * cam.scale)
             .extend(pos.translation.z);
+
+        game_state.camera_auto_zoom = false;
     }
     if tr.length_squared() > 0.0 {
         let s = Vec2::new(
@@ -529,6 +533,9 @@ pub fn scroll_game(
                 break;
             }
         }
+    }
+    if game_state.camera_auto_zoom {
+        cam.scale = 0.7;
     }
     *prev = Some(cursor_position);
 }
@@ -590,9 +597,15 @@ pub fn game_ui(mut game_state: ResMut<GameState>, mut egui_context: ResMut<EguiC
         let sep = egui::Separator::default().spacing(12.).horizontal();
         ui.add(sep);
 
+        ui.label("Drag to pan the camera");
         ui.checkbox(
             &mut game_state.camera_follows_player,
             "Camera follows current player",
+        );
+        ui.label("Scroll to zoom in or out");
+        ui.checkbox(
+            &mut game_state.camera_auto_zoom,
+            "Automatically set camera zoom level",
         );
     });
 }
