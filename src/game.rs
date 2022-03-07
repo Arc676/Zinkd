@@ -51,11 +51,6 @@ pub struct MainCamera;
 #[derive(Component)]
 pub struct EntityTooltip(String);
 
-pub struct ScalingData {
-    tile_size: Vec2,
-    offset: Vec2,
-}
-
 enum GameAction {
     WaitForInput,
     UsingItem,
@@ -128,7 +123,6 @@ pub fn setup_game(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     settings: Res<GameSettings>,
-    window: Res<Windows>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
     commands
@@ -143,22 +137,9 @@ pub fn setup_game(
         settings.travel_distance(),
     );
 
-    let window = window.get_primary().unwrap();
-    let width = window.width() as i32;
-    let tile_width = width / settings.map_width() as i32;
-    let height = window.height() as i32;
-    let tile_height = height / settings.map_height() as i32;
-
-    let tile_size = (tile_width.min(tile_height) / 24) * 24;
-    let tile_size = Vec2::splat(tile_size as f32);
-
-    let offset = Vec2::new(
-        settings.map_width() as f32 / 2. - 0.5,
-        settings.map_height() as f32 / 2. - 0.5,
-    ) * tile_size;
+    let tile_size = Vec2::splat(96.);
     let coords_to_vec =
-        |x: usize, y: usize, z: f32| (Vec2::new(x as f32, y as f32) * tile_size - offset).extend(z);
-    commands.insert_resource(ScalingData { tile_size, offset });
+        |x: usize, y: usize, z: f32| Vec2::new(x as f32 * 96., y as f32 * 96.).extend(z);
 
     let straight = asset_server.load("tiles/tile_straight.png");
     let dead_end = asset_server.load("tiles/tile_dead_end.png");
@@ -293,13 +274,13 @@ pub fn setup_game(
     let texture = asset_server.load("sprites/DieFaces.png");
     let texture_atlas = TextureAtlas::from_grid(texture, Vec2::splat(32.), 6, 1);
     let texture_atlas = texture_atlases.add(texture_atlas);
-    let translation = Vec2::new(width as f32 / 2. - 20., height as f32 / 2. - 20.).extend(0.);
+    // let translation = Vec2::new(width as f32 / 2. - 20., height as f32 / 2. - 20.).extend(0.);
     commands.spawn_bundle(SpriteSheetBundle {
         texture_atlas,
-        transform: Transform {
-            translation,
-            ..Default::default()
-        },
+        // transform: Transform {
+        //     translation,
+        //     ..Default::default()
+        // },
         visibility: Visibility { is_visible: false },
         ..Default::default()
     });
@@ -369,7 +350,6 @@ pub fn update_die(
 
 pub fn entity_tooltips(
     mut game_state: ResMut<GameState>,
-    scaling_data: Res<ScalingData>,
     windows: Res<Windows>,
     camera_query: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     item_query: Query<(&GlobalTransform, &EntityTooltip)>,
@@ -377,7 +357,7 @@ pub fn entity_tooltips(
     // https://bevy-cheatbook.github.io/cookbook/cursor2world.html
     let (camera, camera_transform) = camera_query.single();
 
-    let threshold = scaling_data.tile_size.length() / 2.;
+    let threshold = 96.0 / 2.0f32.sqrt();
 
     let wnd = windows.get(camera.window).unwrap();
 
@@ -403,7 +383,6 @@ pub fn update_game(
     mut commands: Commands,
     mut game_state: ResMut<GameState>,
     keyboard: Res<Input<KeyCode>>,
-    scaling: Res<ScalingData>,
     mut map: ResMut<Map>,
     mut player_query: Query<(&mut Player, &mut Transform, &mut Sprite)>,
     item_query: Query<(Entity, &Transform, &EntityTooltip), Without<Player>>,
@@ -435,11 +414,8 @@ pub fn update_game(
                         if player.step(step, &map) {
                             let position = player.position();
                             let Coordinates(x, y) = position;
-                            let coords_to_vec = |x: usize, y: usize, z: f32| {
-                                (Vec2::new(x as f32, y as f32) * scaling.tile_size - scaling.offset)
-                                    .extend(z)
-                            };
-                            transform.translation = coords_to_vec(x, y, 1.);
+                            transform.translation =
+                                Vec2::new(x as f32 * 96., y as f32 * 96.).extend(1.);
                             sprite.flip_x = step == WEST;
                             match map.cell_at_mut(position) {
                                 GridCell::Path(_, item) if item.is_some() => {
