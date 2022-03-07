@@ -76,6 +76,7 @@ pub struct GameSettings {
     map_height: usize,
     item_density: f64,
     initial_travel_distance: usize,
+    default_zoom_level: f32,
 }
 
 impl Default for GameSettings {
@@ -88,6 +89,7 @@ impl Default for GameSettings {
             map_height: 20,
             item_density: 0.1,
             initial_travel_distance: 10,
+            default_zoom_level: 0.7,
         }
     }
 }
@@ -123,6 +125,10 @@ impl GameSettings {
 
     pub fn travel_distance(&self) -> usize {
         self.initial_travel_distance
+    }
+
+    pub fn default_zoom_level(&self) -> f32 {
+        self.default_zoom_level
     }
 }
 
@@ -193,6 +199,17 @@ pub fn settings_ui(
         );
 
         number_setting(ui, &mut settings.item_density, 0., 0.8, "Item density");
+
+        let sep = Separator::default().spacing(12.).horizontal();
+        ui.add(sep);
+
+        number_setting(
+            ui,
+            &mut settings.default_zoom_level,
+            0.05,
+            5.,
+            "Default camera zoom level (higher is more zoomed out)",
+        );
 
         let sep = Separator::default().spacing(12.).horizontal();
         ui.add(sep);

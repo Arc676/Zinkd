@@ -100,6 +100,7 @@ pub struct GameState {
     winner_names: Vec<String>,
     game_over: bool,
     camera_follows_player: bool,
+    camera_default_zoom: f32,
     camera_auto_zoom: bool,
     camera_zoom: f32,
 }
@@ -292,6 +293,7 @@ pub fn setup_game(
         player_names,
         camera_follows_player: true,
         camera_auto_zoom: true,
+        camera_default_zoom: settings.default_zoom_level(),
         ..Default::default()
     });
 }
@@ -537,7 +539,7 @@ pub fn scroll_game(
         }
     }
     if game_state.camera_auto_zoom {
-        cam.scale = 0.7;
+        cam.scale = game_state.camera_default_zoom;
     }
     *prev = Some(cursor_position);
 }
