@@ -104,6 +104,7 @@ pub struct GameState {
     winners: Vec<u32>,
     winner_names: Vec<String>,
     game_over: bool,
+    camera_follows_player: bool,
 }
 
 impl GameState {
@@ -306,6 +307,7 @@ pub fn setup_game(
     commands.insert_resource(GameState {
         player_count: settings.players(),
         player_names,
+        camera_follows_player: true,
         ..Default::default()
     });
 }
@@ -501,6 +503,8 @@ pub fn scroll_game(
     windows: Res<Windows>,
     input_mouse: Res<Input<MouseButton>>,
     mut prev: Local<Option<Vec2>>,
+    mut game_state: ResMut<GameState>,
+    player_query: Query<(&Transform, &Player), Without<MainCamera>>,
 ) {
     let mut tr = Vec2::ZERO;
 
@@ -534,12 +538,26 @@ pub fn scroll_game(
             window.width() / (cam.right - cam.left),
             window.height() / (cam.top - cam.bottom),
         ) * cam.scale;
-        pos.translation -= (tr * s).extend(0.)
+        pos.translation -= (tr * s).extend(0.);
+        game_state.camera_follows_player = false;
     }
-    *prev = Some(cursor_position)
+
+    if game_state.camera_follows_player {
+        for (transform, player) in player_query.iter() {
+            if player.player_number() == game_state.active_player {
+                pos.translation = Vec3::new(
+                    transform.translation.x,
+                    transform.translation.y,
+                    pos.translation.z,
+                );
+                break;
+            }
+        }
+    }
+    *prev = Some(cursor_position);
 }
 
-pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>) {
+pub fn game_ui(mut game_state: ResMut<GameState>, mut egui_context: ResMut<EguiContext>) {
     egui::Window::new("Control Panel").show(egui_context.ctx_mut(), |ui| {
         if game_state.game_over {
             ui.heading("Game over!");
@@ -592,6 +610,14 @@ pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>
         } else {
             ui.label("Hover over an item to see its description");
         }
+
+        let sep = egui::Separator::default().spacing(12.).horizontal();
+        ui.add(sep);
+
+        ui.checkbox(
+            &mut game_state.camera_follows_player,
+            "Camera follows current player",
+        );
     });
 }
 
@@ -601,7 +627,7 @@ fn get_player_with_number<'a>(number: u32, query: &'a mut Query<&mut Player>) ->
             return player;
         }
     }
-    panic!("No active player");
+    panic!("No player with given number");
 }
 
 fn get_painter(ui: &mut egui::Ui) -> (egui::Painter, egui::emath::RectTransform) {
