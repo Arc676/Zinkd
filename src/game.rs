@@ -521,8 +521,12 @@ pub fn scroll_game(
         .extend(pos.translation.z);
 }
 
-pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>) {
-    egui::Window::new("Control Panel").show(egui_context.ctx_mut(), |ui| {
+pub fn control_panel(
+    game_state: Res<GameState>,
+    mut query: Query<&mut Player>,
+    mut egui_context: ResMut<EguiContext>,
+) {
+    egui::SidePanel::left("left_panel").show(egui_context.ctx_mut(), |ui| {
         if game_state.game_over {
             ui.heading("Game over!");
             ui.label("Leaderboard:");
@@ -574,6 +578,17 @@ pub fn game_ui(game_state: Res<GameState>, mut egui_context: ResMut<EguiContext>
         } else {
             ui.label("Hover over an item to see its description");
         }
+
+        let sep = egui::Separator::default().spacing(12.).horizontal();
+        ui.add(sep);
+
+        let player = get_player_with_number(game_state.active_player, &mut query);
+        ui.heading(format!("Die weights for {}", player.name()));
+        let (painter, to_screen) = get_painter(ui);
+        die_weight_labels(&painter, to_screen);
+        player
+            .die()
+            .visualize_weights(&painter, to_screen, egui::Color32::BLUE);
     });
 }
 
@@ -684,22 +699,6 @@ fn item_preview(
     chosen_action
 }
 
-fn die_inspector(
-    egui_context: &mut ResMut<EguiContext>,
-    query: &mut Query<&mut Player>,
-    game_state: &mut ResMut<GameState>,
-) {
-    let player = get_player_with_number(game_state.active_player, query);
-    egui::Window::new("Die Inspector").show(egui_context.ctx_mut(), |ui| {
-        ui.heading(format!("Die weights for {}", player.name()));
-        let (painter, to_screen) = get_painter(ui);
-        die_weight_labels(&painter, to_screen);
-        player
-            .die()
-            .visualize_weights(&painter, to_screen, egui::Color32::BLUE);
-    });
-}
-
 fn inventory_window(
     egui_context: &mut ResMut<EguiContext>,
     query: &mut Query<&mut Player>,
@@ -765,7 +764,6 @@ pub fn player_hud(
     mut query: Query<&mut Player>,
     mut game_state: ResMut<GameState>,
 ) {
-    die_inspector(&mut egui_context, &mut query, &mut game_state);
     if let GameAction::UsingItem = game_state.current_action {
         match item_preview(&mut egui_context, &mut query, &mut game_state) {
             ItemAction::NoAction => {}
