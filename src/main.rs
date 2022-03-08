@@ -62,7 +62,7 @@ fn main() {
                 .with_system(game::update_game)
                 .with_system(game::update_die)
                 .with_system(game::control_panel)
-                .with_system(game::player_hud)
+                .with_system(game::item_panel)
                 .with_system(game::entity_tooltips)
                 .with_system(game::pause_menu)
                 .with_system(game::scroll_game),

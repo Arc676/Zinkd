@@ -526,7 +526,7 @@ pub fn control_panel(
     mut query: Query<&mut Player>,
     mut egui_context: ResMut<EguiContext>,
 ) {
-    egui::SidePanel::left("left_panel").show(egui_context.ctx_mut(), |ui| {
+    egui::SidePanel::left("Control Panel").show(egui_context.ctx_mut(), |ui| {
         if game_state.game_over {
             ui.heading("Game over!");
             ui.label("Leaderboard:");
@@ -656,7 +656,7 @@ fn item_preview(
             }
         }
     }
-    egui::Window::new("Item Effect").show(egui_context.ctx_mut(), |ui| {
+    egui::SidePanel::right("Item Effect").show(egui_context.ctx_mut(), |ui| {
         ui.horizontal(|ui| {
             ui.label(format!(
                 "Use {} item on {}?",
@@ -705,7 +705,7 @@ fn inventory_window(
     game_state: &mut ResMut<GameState>,
 ) {
     let player = get_player_with_number(game_state.active_player, query);
-    egui::Window::new("Inventory").show(egui_context.ctx_mut(), |ui| {
+    egui::SidePanel::right("Inventory").show(egui_context.ctx_mut(), |ui| {
         ui.heading(format!("{}'s inventory", player.name()));
         if player.inventory_empty() {
             ui.label("No items");
@@ -736,12 +736,8 @@ fn inventory_window(
                                 }
                             });
                     });
-                    if let GameAction::HasMoved = game_state.current_action {
-                        ui.horizontal(|ui| {
-                            if ui.button("Use item...").clicked() {
-                                used = Some(i);
-                            }
-                        });
+                    if ui.button("Use item...").clicked() {
+                        used = Some(i);
                     }
                 });
             });
@@ -759,7 +755,7 @@ fn inventory_window(
     });
 }
 
-pub fn player_hud(
+pub fn item_panel(
     mut egui_context: ResMut<EguiContext>,
     mut query: Query<&mut Player>,
     mut game_state: ResMut<GameState>,
@@ -770,8 +766,7 @@ pub fn player_hud(
             ItemAction::UseItem => end_turn(&mut game_state),
             ItemAction::CancelItem => game_state.current_action = GameAction::HasMoved,
         }
-    }
-    if game_state.inventory_visible {
+    } else if game_state.inventory_visible {
         inventory_window(&mut egui_context, &mut query, &mut game_state);
     }
 }
