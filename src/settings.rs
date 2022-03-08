@@ -37,10 +37,16 @@ use bevy::prelude::*;
 use bevy_egui::egui::emath::Numeric;
 use bevy_egui::egui::{Separator, Slider, Ui};
 use bevy_egui::{egui, EguiContext};
+use directories_next::ProjectDirs;
+use ron;
+use serde;
 use std::fmt::Formatter;
+use std::fs::{create_dir_all, File};
+use std::io::{Read, Write};
 use std::slice::Iter;
 
 #[derive(Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub enum PlayerSprite {
     Ferris,
     Darryl,
@@ -68,6 +74,8 @@ impl PlayerSprite {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(default))]
 pub struct GameSettings {
     players: u32,
     player_sprites: Vec<PlayerSprite>,
@@ -147,6 +155,7 @@ pub fn settings_ui(
         let size = settings.players as usize;
         if size > settings.player_sprites.len() {
             settings.player_sprites.resize(size, PlayerSprite::Ferris);
+            settings.player_names.resize(size, "New Player".to_string());
         }
 
         ui.label("Choose player names and sprites");
@@ -208,4 +217,33 @@ pub fn settings_ui(
             state.set(AppState::MainMenu).unwrap();
         }
     });
+}
+
+pub fn load_settings(mut settings: ResMut<GameSettings>) {
+    #[cfg(feature = "serde")]
+    if let Some(dir) = ProjectDirs::from("", "", "Dicey Dungeons") {
+        let mut file = dir.config_dir().to_path_buf();
+        file.push("settings.ron");
+        let file = File::open(file);
+        if let Ok(mut file) = file {
+            let mut contents = String::new();
+            file.read_to_string(&mut contents)
+                .expect("Failed to read settings file");
+            if let Ok(existing) = ron::from_str(contents.as_str()) {
+                *settings = existing;
+            }
+        }
+    }
+}
+
+pub fn save_settings(settings: Res<GameSettings>) {
+    #[cfg(feature = "serde")]
+    if let Some(dir) = ProjectDirs::from("", "", "Dicey Dungeons") {
+        let mut file = dir.config_dir().to_path_buf();
+        create_dir_all(&file).expect("Failed to create config directory");
+        file.push("settings.ron");
+        let mut file = File::create(file).expect("Failed to create settings file");
+        file.write(ron::to_string(&*settings).unwrap().as_ref())
+            .expect("Failed to write settings to disk");
+    }
 }
