@@ -52,6 +52,7 @@ fn main() {
         .add_plugin(EguiPlugin)
         .add_state(AppState::MainMenu)
         .insert_resource(settings::GameSettings::default())
+        .add_startup_system(settings::load_settings)
         .add_system_set(SystemSet::on_enter(AppState::MainMenu).with_system(main_menu::setup_menu))
         .add_system_set(SystemSet::on_update(AppState::MainMenu).with_system(main_menu::main_menu))
         .add_system_set(SystemSet::on_exit(AppState::MainMenu).with_system(main_menu::cleanup_menu))
@@ -68,5 +69,6 @@ fn main() {
         )
         .add_system_set(SystemSet::on_exit(AppState::Game).with_system(game::cleanup_game))
         .add_system_set(SystemSet::on_update(AppState::Settings).with_system(settings::settings_ui))
+        .add_system_set(SystemSet::on_exit(AppState::Settings).with_system(settings::save_settings))
         .run();
 }
