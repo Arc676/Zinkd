@@ -2,6 +2,9 @@
 name = "dicey_dungeons"
 version = "0.1.0"
 edition = "2021"
+authors = ["Arc676/Alessandro Vinciguerra <alesvinciguerra@gmail.com>", "Fatcat560 <s.mario95@googlemail.com>"]
+readme = "README.md"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 serde = { version = "1", features = ["derive"], optional = true }
