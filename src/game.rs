@@ -498,7 +498,11 @@ pub fn scroll_game(
         None => return,
     };
 
-    if input_mouse.pressed(MouseButton::Left) && !input_mouse.just_pressed(MouseButton::Left) {
+    if input_mouse.pressed(MouseButton::Left)
+        && !input_mouse.just_pressed(MouseButton::Left)
+        && cursor_position.x > game_state.left_panel_width
+        && cursor_position.x < window.width() - game_state.right_panel_width
+    {
         tr = cursor_position - prev.unwrap_or(cursor_position);
     }
 
@@ -819,6 +823,8 @@ pub fn item_panel(
         }
     } else if game_state.inventory_visible {
         inventory_window(&mut egui_context, &mut query, &mut game_state);
+    } else {
+        game_state.right_panel_width = 0.;
     }
 }
 
