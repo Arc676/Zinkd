@@ -50,11 +50,6 @@ pub struct MainCamera;
 #[derive(Component)]
 pub struct EntityTooltip(String);
 
-pub struct ScalingData {
-    tile_size: Vec2,
-    offset: Vec2,
-}
-
 enum GameAction {
     WaitForInput,
     UsingItem,
@@ -103,6 +98,12 @@ pub struct GameState {
     winners: Vec<u32>,
     winner_names: Vec<String>,
     game_over: bool,
+    camera_follows_player: bool,
+    camera_default_zoom: f32,
+    camera_auto_zoom: bool,
+    camera_zoom: f32,
+    left_panel_width: f32,
+    right_panel_width: f32,
 }
 
 impl GameState {
@@ -126,7 +127,6 @@ pub fn setup_game(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     settings: Res<GameSettings>,
-    window: Res<Windows>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
     commands
@@ -141,22 +141,9 @@ pub fn setup_game(
         settings.travel_distance(),
     );
 
-    let window = window.get_primary().unwrap();
-    let width = window.width() as i32;
-    let tile_width = width / settings.map_width() as i32;
-    let height = window.height() as i32;
-    let tile_height = height / settings.map_height() as i32;
-
-    let tile_size = (tile_width.min(tile_height) / 24) * 24;
-    let tile_size = Vec2::splat(tile_size as f32);
-
-    let offset = Vec2::new(
-        settings.map_width() as f32 / 2. - 0.5,
-        settings.map_height() as f32 / 2. - 0.5,
-    ) * tile_size;
+    let tile_size = Vec2::splat(96.);
     let coords_to_vec =
-        |x: usize, y: usize, z: f32| (Vec2::new(x as f32, y as f32) * tile_size - offset).extend(z);
-    commands.insert_resource(ScalingData { tile_size, offset });
+        |x: usize, y: usize, z: f32| Vec2::new(x as f32 * 96., y as f32 * 96.).extend(z);
 
     let straight = asset_server.load("tiles/tile_straight.png");
     let dead_end = asset_server.load("tiles/tile_dead_end.png");
@@ -291,13 +278,13 @@ pub fn setup_game(
     let texture = asset_server.load("sprites/DieFaces.png");
     let texture_atlas = TextureAtlas::from_grid(texture, Vec2::splat(32.), 6, 1);
     let texture_atlas = texture_atlases.add(texture_atlas);
-    let translation = Vec2::new(width as f32 / 2. - 20., height as f32 / 2. - 20.).extend(0.);
+    // let translation = Vec2::new(width as f32 / 2. - 20., height as f32 / 2. - 20.).extend(0.);
     commands.spawn_bundle(SpriteSheetBundle {
         texture_atlas,
-        transform: Transform {
-            translation,
-            ..Default::default()
-        },
+        // transform: Transform {
+        //     translation,
+        //     ..Default::default()
+        // },
         visibility: Visibility { is_visible: false },
         ..Default::default()
     });
@@ -305,6 +292,9 @@ pub fn setup_game(
     commands.insert_resource(GameState {
         player_count: settings.players(),
         player_names,
+        camera_follows_player: true,
+        camera_auto_zoom: true,
+        camera_default_zoom: settings.default_zoom_level(),
         ..Default::default()
     });
 }
@@ -366,7 +356,6 @@ pub fn update_die(
 
 pub fn entity_tooltips(
     mut game_state: ResMut<GameState>,
-    scaling_data: Res<ScalingData>,
     windows: Res<Windows>,
     camera_query: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     item_query: Query<(&GlobalTransform, &EntityTooltip)>,
@@ -374,7 +363,7 @@ pub fn entity_tooltips(
     // https://bevy-cheatbook.github.io/cookbook/cursor2world.html
     let (camera, camera_transform) = camera_query.single();
 
-    let threshold = scaling_data.tile_size.length() / 2.;
+    let threshold = 96.0 / 2.0f32.sqrt();
 
     let wnd = windows.get(camera.window).unwrap();
 
@@ -400,7 +389,6 @@ pub fn update_game(
     mut commands: Commands,
     mut game_state: ResMut<GameState>,
     keyboard: Res<Input<KeyCode>>,
-    scaling: Res<ScalingData>,
     mut map: ResMut<Map>,
     mut player_query: Query<(&mut Player, &mut Transform, &mut Sprite)>,
     item_query: Query<(Entity, &Transform, &EntityTooltip), Without<Player>>,
@@ -432,11 +420,8 @@ pub fn update_game(
                         if player.step(step, &map) {
                             let position = player.position();
                             let Coordinates(x, y) = position;
-                            let coords_to_vec = |x: usize, y: usize, z: f32| {
-                                (Vec2::new(x as f32, y as f32) * scaling.tile_size - scaling.offset)
-                                    .extend(z)
-                            };
-                            transform.translation = coords_to_vec(x, y, 1.);
+                            transform.translation =
+                                Vec2::new(x as f32 * 96., y as f32 * 96.).extend(1.);
                             sprite.flip_x = step == WEST;
                             match map.cell_at_mut(position) {
                                 GridCell::Path(_, item) if item.is_some() => {
@@ -498,35 +483,79 @@ pub fn scroll_game(
     mut whl: EventReader<MouseWheel>,
     mut cam: Query<(&mut Transform, &mut OrthographicProjection), With<MainCamera>>,
     windows: Res<Windows>,
+    input_mouse: Res<Input<MouseButton>>,
+    mut prev: Local<Option<Vec2>>,
+    mut game_state: ResMut<GameState>,
+    player_query: Query<(&Transform, &Player), Without<MainCamera>>,
 ) {
+    let mut tr = Vec2::ZERO;
+
     let delta_zoom: f32 = whl.iter().map(|e| e.y).sum();
-    if delta_zoom == 0. {
-        return;
+    let (mut pos, mut cam) = cam.single_mut();
+    let window = windows.get_primary().unwrap();
+    let cursor_position = match window.cursor_position() {
+        Some(x) => x,
+        None => return,
+    };
+
+    if input_mouse.pressed(MouseButton::Left)
+        && !input_mouse.just_pressed(MouseButton::Left)
+        && cursor_position.x > game_state.left_panel_width
+        && cursor_position.x < window.width() - game_state.right_panel_width
+    {
+        tr = cursor_position - prev.unwrap_or(cursor_position);
     }
 
-    let (mut pos, mut cam) = cam.single_mut();
+    if delta_zoom != 0. {
+        let window_size = Vec2::new(window.width(), window.height());
+        let mouse_normalized_screen_pos = (cursor_position / window_size) * 2. - Vec2::ONE;
+        let mouse_world_pos = pos.translation.truncate()
+            + mouse_normalized_screen_pos * Vec2::new(cam.right, cam.top) * cam.scale;
 
-    let window = windows.get_primary().unwrap();
-    let window_size = Vec2::new(window.width(), window.height());
-    let mouse_normalized_screen_pos =
-        (window.cursor_position().unwrap() / window_size) * 2. - Vec2::ONE;
-    let mouse_world_pos = pos.translation.truncate()
-        + mouse_normalized_screen_pos * Vec2::new(cam.right, cam.top) * cam.scale;
+        cam.scale -= 0.05 * delta_zoom * cam.scale;
+        cam.scale = cam.scale.clamp(0.05, 10.0);
 
-    cam.scale -= 0.05 * delta_zoom * cam.scale;
-    cam.scale = cam.scale.clamp(0.05, 10.0);
+        pos.translation = (mouse_world_pos
+            - mouse_normalized_screen_pos * Vec2::new(cam.right, cam.top) * cam.scale)
+            .extend(pos.translation.z);
 
-    pos.translation = (mouse_world_pos
-        - mouse_normalized_screen_pos * Vec2::new(cam.right, cam.top) * cam.scale)
-        .extend(pos.translation.z);
+        game_state.camera_auto_zoom = false;
+        game_state.camera_zoom = cam.scale;
+    }
+    if tr.length_squared() > 0.0 {
+        let s = Vec2::new(
+            window.width() / (cam.right - cam.left),
+            window.height() / (cam.top - cam.bottom),
+        ) * cam.scale;
+        pos.translation -= (tr * s).extend(0.);
+        game_state.camera_follows_player = false;
+    }
+
+    if game_state.camera_follows_player {
+        for (transform, player) in player_query.iter() {
+            if player.player_number() == game_state.active_player {
+                pos.translation = Vec3::new(
+                    transform.translation.x,
+                    transform.translation.y,
+                    pos.translation.z,
+                );
+                break;
+            }
+        }
+    }
+    if game_state.camera_auto_zoom {
+        cam.scale = game_state.camera_default_zoom;
+    }
+    *prev = Some(cursor_position);
 }
 
 pub fn control_panel(
-    game_state: Res<GameState>,
+    mut game_state: ResMut<GameState>,
     mut query: Query<&mut Player>,
     mut egui_context: ResMut<EguiContext>,
 ) {
     egui::SidePanel::left("Control Panel").show(egui_context.ctx_mut(), |ui| {
+        game_state.left_panel_width = ui.available_width();
         if game_state.game_over {
             ui.heading("Game over!");
             ui.label("Leaderboard:");
@@ -582,6 +611,23 @@ pub fn control_panel(
         let sep = egui::Separator::default().spacing(12.).horizontal();
         ui.add(sep);
 
+        ui.label("Drag to pan the camera");
+        ui.checkbox(
+            &mut game_state.camera_follows_player,
+            "Camera follows current player",
+        );
+        ui.label("Scroll to zoom in or out");
+        ui.checkbox(
+            &mut game_state.camera_auto_zoom,
+            "Automatically set camera zoom level",
+        );
+        if !game_state.camera_auto_zoom {
+            ui.label(format!("Current zoom level: {:.2}", game_state.camera_zoom));
+        }
+
+        let sep = egui::Separator::default().spacing(12.).horizontal();
+        ui.add(sep);
+
         let player = get_player_with_number(game_state.active_player, &mut query);
         ui.heading(format!("Die weights for {}", player.name()));
         let (painter, to_screen) = get_painter(ui);
@@ -598,7 +644,7 @@ fn get_player_with_number<'a>(number: u32, query: &'a mut Query<&mut Player>) ->
             return player;
         }
     }
-    panic!("No active player");
+    panic!("No player with given number");
 }
 
 fn get_painter(ui: &mut egui::Ui) -> (egui::Painter, egui::emath::RectTransform) {
@@ -640,23 +686,28 @@ fn item_preview(
             game_state.item_preview.source_player,
         )
         .to_string();
-    let item_preview = &mut game_state.item_preview;
-    if item_preview.effect.is_none() {
-        match item_preview.item_type {
-            _ => {
-                let (die_before, mut die_after) = {
-                    let target_player = get_player_with_number(item_preview.target_player, query);
-                    let die_before = target_player.die().clone();
-                    let die_after = die_before.clone();
-                    (die_before, die_after)
-                };
-                let user = get_player_with_number(item_preview.source_player, query);
-                user.use_item_on_die(&mut die_after, item_preview.item_index);
-                item_preview.effect = Some(ItemEffect::DieTransform(die_before, die_after));
+    {
+        let item_preview = &mut game_state.item_preview;
+        if item_preview.effect.is_none() {
+            match item_preview.item_type {
+                _ => {
+                    let (die_before, mut die_after) = {
+                        let target_player =
+                            get_player_with_number(item_preview.target_player, query);
+                        let die_before = target_player.die().clone();
+                        let die_after = die_before.clone();
+                        (die_before, die_after)
+                    };
+                    let user = get_player_with_number(item_preview.source_player, query);
+                    user.use_item_on_die(&mut die_after, item_preview.item_index);
+                    item_preview.effect = Some(ItemEffect::DieTransform(die_before, die_after));
+                }
             }
         }
     }
     egui::SidePanel::right("Item Effect").show(egui_context.ctx_mut(), |ui| {
+        game_state.right_panel_width = ui.available_width();
+        let item_preview = &mut game_state.item_preview;
         ui.horizontal(|ui| {
             ui.label(format!(
                 "Use {} item on {}?",
@@ -695,6 +746,9 @@ fn item_preview(
                 ui.label(effect);
             }
         }
+
+        let sep = egui::Separator::default().horizontal();
+        ui.add(sep);
     });
     chosen_action
 }
@@ -706,9 +760,13 @@ fn inventory_window(
 ) {
     let player = get_player_with_number(game_state.active_player, query);
     egui::SidePanel::right("Inventory").show(egui_context.ctx_mut(), |ui| {
+        game_state.right_panel_width = ui.available_width();
         ui.heading(format!("{}'s inventory", player.name()));
         if player.inventory_empty() {
             ui.label("No items");
+
+            let sep = egui::Separator::default().horizontal();
+            ui.add(sep);
             return;
         }
         let mut used = None;
@@ -752,6 +810,9 @@ fn inventory_window(
             };
             game_state.current_action = GameAction::UsingItem;
         }
+
+        let sep = egui::Separator::default().horizontal();
+        ui.add(sep);
     });
 }
 
@@ -771,20 +832,26 @@ pub fn item_panel(
         }
     } else if game_state.inventory_visible {
         inventory_window(&mut egui_context, &mut query, &mut game_state);
+    } else {
+        game_state.right_panel_width = 0.;
     }
 }
 
 pub fn pause_menu(
     mut egui_context: ResMut<EguiContext>,
     mut state: ResMut<State<AppState>>,
-    game_state: Res<GameState>,
+    mut game_state: ResMut<GameState>,
 ) {
     if game_state.paused || game_state.game_over {
         egui::SidePanel::right("Pause").show(egui_context.ctx_mut(), |ui| {
+            game_state.right_panel_width = ui.available_width();
             ui.heading("Pause");
             if ui.button("Back to Main").clicked() {
                 state.set(AppState::MainMenu).unwrap();
             }
+
+            let sep = egui::Separator::default().horizontal();
+            ui.add(sep);
         });
     }
 }

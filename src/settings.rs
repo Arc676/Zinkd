@@ -84,6 +84,7 @@ pub struct GameSettings {
     map_height: usize,
     item_density: f64,
     initial_travel_distance: usize,
+    default_zoom_level: f32,
 }
 
 impl Default for GameSettings {
@@ -92,10 +93,11 @@ impl Default for GameSettings {
             players: 2,
             player_sprites: vec![PlayerSprite::Ferris, PlayerSprite::Darryl],
             player_names: vec!["Ferris".to_string(), "Darryl".to_string()],
-            map_width: 20,
-            map_height: 20,
+            map_width: 60,
+            map_height: 60,
             item_density: 0.1,
-            initial_travel_distance: 10,
+            initial_travel_distance: 40,
+            default_zoom_level: 0.7,
         }
     }
 }
@@ -131,6 +133,10 @@ impl GameSettings {
 
     pub fn travel_distance(&self) -> usize {
         self.initial_travel_distance
+    }
+
+    pub fn default_zoom_level(&self) -> f32 {
+        self.default_zoom_level
     }
 }
 
@@ -181,8 +187,8 @@ pub fn settings_ui(
             });
         }
 
-        number_setting(ui, &mut settings.map_width, 5, 60, "Map width");
-        number_setting(ui, &mut settings.map_height, 5, 60, "Map height");
+        number_setting(ui, &mut settings.map_width, 20, 120, "Map width");
+        number_setting(ui, &mut settings.map_height, 20, 120, "Map height");
 
         let sep = Separator::default().spacing(12.).horizontal();
         ui.add(sep);
@@ -192,7 +198,7 @@ pub fn settings_ui(
          a fixed length before additional paths are generated. This initial distance can be \
          freely chosen.",
         );
-        let max_dist = settings.map_height.min(settings.map_width) / 2;
+        let max_dist = settings.map_height.min(settings.map_width) * 3 / 4;
         number_setting(
             ui,
             &mut settings.initial_travel_distance,
@@ -202,6 +208,17 @@ pub fn settings_ui(
         );
 
         number_setting(ui, &mut settings.item_density, 0., 0.8, "Item density");
+
+        let sep = Separator::default().spacing(12.).horizontal();
+        ui.add(sep);
+
+        number_setting(
+            ui,
+            &mut settings.default_zoom_level,
+            0.05,
+            5.,
+            "Default camera zoom level (higher is more zoomed out)",
+        );
 
         let sep = Separator::default().spacing(12.).horizontal();
         ui.add(sep);

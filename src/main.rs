@@ -59,13 +59,13 @@ fn main() {
         .add_system_set(SystemSet::on_enter(AppState::Game).with_system(game::setup_game))
         .add_system_set(
             SystemSet::on_update(AppState::Game)
+                .with_system(game::scroll_game)
                 .with_system(game::update_game)
                 .with_system(game::update_die)
                 .with_system(game::control_panel)
                 .with_system(game::item_panel)
                 .with_system(game::entity_tooltips)
-                .with_system(game::pause_menu)
-                .with_system(game::scroll_game),
+                .with_system(game::pause_menu),
         )
         .add_system_set(SystemSet::on_exit(AppState::Game).with_system(game::cleanup_game))
         .add_system_set(SystemSet::on_update(AppState::Settings).with_system(settings::settings_ui))
