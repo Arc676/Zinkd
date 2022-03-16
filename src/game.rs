@@ -34,7 +34,6 @@
 
 use crate::settings::GameSettings;
 use crate::AppState;
-use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
 use bevy::{ecs::component::Component, input::mouse::MouseWheel};
 use bevy_egui::{egui, EguiContext};
@@ -103,6 +102,8 @@ pub struct GameState {
     camera_default_zoom: f32,
     camera_auto_zoom: bool,
     camera_zoom: f32,
+    left_panel_width: f32,
+    right_panel_width: f32,
 }
 
 impl GameState {
@@ -550,6 +551,7 @@ pub fn control_panel(
     mut egui_context: ResMut<EguiContext>,
 ) {
     egui::SidePanel::left("Control Panel").show(egui_context.ctx_mut(), |ui| {
+        game_state.left_panel_width = ui.available_width();
         if game_state.game_over {
             ui.heading("Game over!");
             ui.label("Leaderboard:");
@@ -680,23 +682,28 @@ fn item_preview(
             game_state.item_preview.source_player,
         )
         .to_string();
-    let item_preview = &mut game_state.item_preview;
-    if item_preview.effect.is_none() {
-        match item_preview.item_type {
-            _ => {
-                let (die_before, mut die_after) = {
-                    let target_player = get_player_with_number(item_preview.target_player, query);
-                    let die_before = target_player.die().clone();
-                    let die_after = die_before.clone();
-                    (die_before, die_after)
-                };
-                let user = get_player_with_number(item_preview.source_player, query);
-                user.use_item_on_die(&mut die_after, item_preview.item_index);
-                item_preview.effect = Some(ItemEffect::DieTransform(die_before, die_after));
+    {
+        let item_preview = &mut game_state.item_preview;
+        if item_preview.effect.is_none() {
+            match item_preview.item_type {
+                _ => {
+                    let (die_before, mut die_after) = {
+                        let target_player =
+                            get_player_with_number(item_preview.target_player, query);
+                        let die_before = target_player.die().clone();
+                        let die_after = die_before.clone();
+                        (die_before, die_after)
+                    };
+                    let user = get_player_with_number(item_preview.source_player, query);
+                    user.use_item_on_die(&mut die_after, item_preview.item_index);
+                    item_preview.effect = Some(ItemEffect::DieTransform(die_before, die_after));
+                }
             }
         }
     }
     egui::SidePanel::right("Item Effect").show(egui_context.ctx_mut(), |ui| {
+        game_state.right_panel_width = ui.available_width();
+        let item_preview = &mut game_state.item_preview;
         ui.horizontal(|ui| {
             ui.label(format!(
                 "Use {} item on {}?",
@@ -746,6 +753,7 @@ fn inventory_window(
 ) {
     let player = get_player_with_number(game_state.active_player, query);
     egui::SidePanel::right("Inventory").show(egui_context.ctx_mut(), |ui| {
+        game_state.right_panel_width = ui.available_width();
         ui.heading(format!("{}'s inventory", player.name()));
         if player.inventory_empty() {
             ui.label("No items");
@@ -817,10 +825,11 @@ pub fn item_panel(
 pub fn pause_menu(
     mut egui_context: ResMut<EguiContext>,
     mut state: ResMut<State<AppState>>,
-    game_state: Res<GameState>,
+    mut game_state: ResMut<GameState>,
 ) {
     if game_state.paused || game_state.game_over {
         egui::SidePanel::right("Pause").show(egui_context.ctx_mut(), |ui| {
+            game_state.right_panel_width = ui.available_width();
             ui.heading("Pause");
             if ui.button("Back to Main").clicked() {
                 state.set(AppState::MainMenu).unwrap();
