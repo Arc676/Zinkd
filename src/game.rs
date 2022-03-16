@@ -760,6 +760,9 @@ pub fn item_panel(
     mut query: Query<&mut Player>,
     mut game_state: ResMut<GameState>,
 ) {
+    if game_state.paused || game_state.game_over {
+        return;
+    }
     if let GameAction::UsingItem = game_state.current_action {
         match item_preview(&mut egui_context, &mut query, &mut game_state) {
             ItemAction::NoAction => {}
@@ -777,7 +780,8 @@ pub fn pause_menu(
     game_state: Res<GameState>,
 ) {
     if game_state.paused || game_state.game_over {
-        egui::Window::new("Pause").show(egui_context.ctx_mut(), |ui| {
+        egui::SidePanel::right("Pause").show(egui_context.ctx_mut(), |ui| {
+            ui.heading("Pause");
             if ui.button("Back to Main").clicked() {
                 state.set(AppState::MainMenu).unwrap();
             }
