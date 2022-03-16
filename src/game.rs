@@ -746,6 +746,9 @@ fn item_preview(
                 ui.label(effect);
             }
         }
+
+        let sep = egui::Separator::default().horizontal();
+        ui.add(sep);
     });
     chosen_action
 }
@@ -761,6 +764,9 @@ fn inventory_window(
         ui.heading(format!("{}'s inventory", player.name()));
         if player.inventory_empty() {
             ui.label("No items");
+
+            let sep = egui::Separator::default().horizontal();
+            ui.add(sep);
             return;
         }
         let mut used = None;
@@ -804,6 +810,9 @@ fn inventory_window(
             };
             game_state.current_action = GameAction::UsingItem;
         }
+
+        let sep = egui::Separator::default().horizontal();
+        ui.add(sep);
     });
 }
 
@@ -840,6 +849,9 @@ pub fn pause_menu(
             if ui.button("Back to Main").clicked() {
                 state.set(AppState::MainMenu).unwrap();
             }
+
+            let sep = egui::Separator::default().horizontal();
+            ui.add(sep);
         });
     }
 }
