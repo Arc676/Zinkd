@@ -544,8 +544,12 @@ pub fn scroll_game(
     *prev = Some(cursor_position);
 }
 
-pub fn game_ui(mut game_state: ResMut<GameState>, mut egui_context: ResMut<EguiContext>) {
-    egui::Window::new("Control Panel").show(egui_context.ctx_mut(), |ui| {
+pub fn control_panel(
+    mut game_state: ResMut<GameState>,
+    mut query: Query<&mut Player>,
+    mut egui_context: ResMut<EguiContext>,
+) {
+    egui::SidePanel::left("Control Panel").show(egui_context.ctx_mut(), |ui| {
         if game_state.game_over {
             ui.heading("Game over!");
             ui.label("Leaderboard:");
@@ -614,6 +618,17 @@ pub fn game_ui(mut game_state: ResMut<GameState>, mut egui_context: ResMut<EguiC
         if !game_state.camera_auto_zoom {
             ui.label(format!("Current zoom level: {:.2}", game_state.camera_zoom));
         }
+
+        let sep = egui::Separator::default().spacing(12.).horizontal();
+        ui.add(sep);
+
+        let player = get_player_with_number(game_state.active_player, &mut query);
+        ui.heading(format!("Die weights for {}", player.name()));
+        let (painter, to_screen) = get_painter(ui);
+        die_weight_labels(&painter, to_screen);
+        player
+            .die()
+            .visualize_weights(&painter, to_screen, egui::Color32::BLUE);
     });
 }
 
@@ -681,7 +696,7 @@ fn item_preview(
             }
         }
     }
-    egui::Window::new("Item Effect").show(egui_context.ctx_mut(), |ui| {
+    egui::SidePanel::right("Item Effect").show(egui_context.ctx_mut(), |ui| {
         ui.horizontal(|ui| {
             ui.label(format!(
                 "Use {} item on {}?",
@@ -724,29 +739,13 @@ fn item_preview(
     chosen_action
 }
 
-fn die_inspector(
-    egui_context: &mut ResMut<EguiContext>,
-    query: &mut Query<&mut Player>,
-    game_state: &mut ResMut<GameState>,
-) {
-    let player = get_player_with_number(game_state.active_player, query);
-    egui::Window::new("Die Inspector").show(egui_context.ctx_mut(), |ui| {
-        ui.heading(format!("Die weights for {}", player.name()));
-        let (painter, to_screen) = get_painter(ui);
-        die_weight_labels(&painter, to_screen);
-        player
-            .die()
-            .visualize_weights(&painter, to_screen, egui::Color32::BLUE);
-    });
-}
-
 fn inventory_window(
     egui_context: &mut ResMut<EguiContext>,
     query: &mut Query<&mut Player>,
     game_state: &mut ResMut<GameState>,
 ) {
     let player = get_player_with_number(game_state.active_player, query);
-    egui::Window::new("Inventory").show(egui_context.ctx_mut(), |ui| {
+    egui::SidePanel::right("Inventory").show(egui_context.ctx_mut(), |ui| {
         ui.heading(format!("{}'s inventory", player.name()));
         if player.inventory_empty() {
             ui.label("No items");
@@ -777,12 +776,8 @@ fn inventory_window(
                                 }
                             });
                     });
-                    if let GameAction::HasMoved = game_state.current_action {
-                        ui.horizontal(|ui| {
-                            if ui.button("Use item...").clicked() {
-                                used = Some(i);
-                            }
-                        });
+                    if ui.button("Use item...").clicked() {
+                        used = Some(i);
                     }
                 });
             });
@@ -800,20 +795,21 @@ fn inventory_window(
     });
 }
 
-pub fn player_hud(
+pub fn item_panel(
     mut egui_context: ResMut<EguiContext>,
     mut query: Query<&mut Player>,
     mut game_state: ResMut<GameState>,
 ) {
-    die_inspector(&mut egui_context, &mut query, &mut game_state);
+    if game_state.paused || game_state.game_over {
+        return;
+    }
     if let GameAction::UsingItem = game_state.current_action {
         match item_preview(&mut egui_context, &mut query, &mut game_state) {
             ItemAction::NoAction => {}
             ItemAction::UseItem => end_turn(&mut game_state),
             ItemAction::CancelItem => game_state.current_action = GameAction::HasMoved,
         }
-    }
-    if game_state.inventory_visible {
+    } else if game_state.inventory_visible {
         inventory_window(&mut egui_context, &mut query, &mut game_state);
     }
 }
@@ -824,7 +820,8 @@ pub fn pause_menu(
     game_state: Res<GameState>,
 ) {
     if game_state.paused || game_state.game_over {
-        egui::Window::new("Pause").show(egui_context.ctx_mut(), |ui| {
+        egui::SidePanel::right("Pause").show(egui_context.ctx_mut(), |ui| {
+            ui.heading("Pause");
             if ui.button("Back to Main").clicked() {
                 state.set(AppState::MainMenu).unwrap();
             }
