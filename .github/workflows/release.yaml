@@ -39,10 +39,10 @@ jobs:
           git fetch
           git branch gh-page origin/gh-page
           git checkout gh-page
-          git checkout master -- assets/
+          git checkout origin/master -- assets/
           git add assets/ *.js *.wasm
           git commit -m "Update WASM to $GIT_TAG_NAME"
-          git push
+          git push -u origin gh-page
 
   # Build for Linux
   release-linux:
