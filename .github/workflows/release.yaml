@@ -48,7 +48,7 @@ jobs:
       - name: Build
         run: |
           cargo build --release --target wasm32-unknown-unknown
-          wasm-bindgen --no-typescript --out-name ${{ env.binary }} --out-dir . --target web target/wasm32-unknown-unknown/release/${{ env.binary }}.wasm
+          wasm-bindgen --no-typescript --out-name ${{ env.binary }} --out-dir . --target web target/wasm32-unknown-unknown/release/*.wasm
 
       - name: Set up Git environment
         run: |
