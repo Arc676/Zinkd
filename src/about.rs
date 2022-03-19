@@ -32,46 +32,31 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+use crate::AppState;
 use bevy::prelude::*;
-use bevy_egui::EguiPlugin;
+use bevy_egui::{egui, EguiContext};
 
-mod about;
-mod game;
-mod main_menu;
-mod settings;
+pub fn about_ui(mut egui_context: ResMut<EguiContext>, mut state: ResMut<State<AppState>>) {
+    egui::CentralPanel::default().show(egui_context.ctx_mut(), |ui| {
+        ui.heading("About Dicey Dungeons");
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum AppState {
-    MainMenu,
-    Game,
-    Settings,
-    About,
-}
+        ui.label("Project by Arc676/Alessandro Vinciguerra and Fatcat590. Created for the first Bevy Jam");
 
-fn main() {
-    App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugin(EguiPlugin)
-        .add_state(AppState::MainMenu)
-        .insert_resource(settings::GameSettings::default())
-        .add_startup_system(settings::load_settings)
-        .add_system_set(SystemSet::on_enter(AppState::MainMenu).with_system(main_menu::setup_menu))
-        .add_system_set(SystemSet::on_update(AppState::MainMenu).with_system(main_menu::main_menu))
-        .add_system_set(SystemSet::on_exit(AppState::MainMenu).with_system(main_menu::cleanup_menu))
-        .add_system_set(SystemSet::on_enter(AppState::Game).with_system(game::setup_game))
-        .add_system_set(
-            SystemSet::on_update(AppState::Game)
-                .with_system(game::scroll_game)
-                .with_system(game::update_game)
-                .with_system(game::update_die)
-                .with_system(game::control_panel)
-                .with_system(game::item_panel)
-                .with_system(game::entity_tooltips)
-                .with_system(game::pause_menu),
-        )
-        .add_system_set(SystemSet::on_exit(AppState::Game).with_system(game::cleanup_game))
-        .add_system_set(SystemSet::on_update(AppState::Settings).with_system(settings::settings_ui))
-        .add_system_set(SystemSet::on_exit(AppState::Settings).with_system(settings::save_settings))
-        .add_system_set(SystemSet::on_update(AppState::About).with_system(about::about_ui))
-        .run();
+        ui.label("This project is available under the terms of the MIT license or the Apache 2.0 license, at your option. You should have received copies of the licenses with this game. If not, you can find them in the repositories.");
+        ui.horizontal(|ui| {
+            ui.hyperlink_to("GitHub repository", "https://github.com/Arc676/Dicey-Dungeons");
+            ui.hyperlink_to("GitLab repository", "https://gitlab.com/Arc676/dicey-dungeons");
+            ui.hyperlink_to("Bevy Jam", "https://itch.io/jam/bevy-jam-1");
+        });
+
+        ui.add(egui::Separator::default().horizontal());
+
+        ui.label(include_str!("../licenses/CREDITS"));
+
+        ui.add(egui::Separator::default().horizontal());
+
+        if ui.button("Back to Main").clicked() {
+            state.set(AppState::MainMenu).unwrap();
+        }
+    });
 }

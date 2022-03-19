@@ -40,6 +40,7 @@ pub struct MainMenu {
     play_btn: Entity,
     settings_btn: Entity,
     quit_btn: Entity,
+    about_btn: Entity,
 }
 
 const NORMAL_BUTTON: Color = Color::rgb(0.35, 0.35, 0.35);
@@ -82,11 +83,13 @@ pub fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn_bundle(UiCameraBundle::default());
     let play_btn = button_with_text!(commands, asset_server, "Play");
     let settings_btn = button_with_text!(commands, asset_server, "Settings");
+    let about_btn = button_with_text!(commands, asset_server, "About");
     let quit_btn = button_with_text!(commands, asset_server, "Quit");
     commands.insert_resource(MainMenu {
         play_btn,
         settings_btn,
         quit_btn,
+        about_btn,
     });
 }
 
@@ -106,6 +109,8 @@ pub fn main_menu(
                     state.set(AppState::Game).unwrap();
                 } else if entity == menu.settings_btn {
                     state.set(AppState::Settings).unwrap();
+                } else if entity == menu.about_btn {
+                    state.set(AppState::About).unwrap();
                 } else {
                     app_exit_events.send(AppExit {});
                 }
@@ -124,4 +129,5 @@ pub fn cleanup_menu(mut commands: Commands, menu: Res<MainMenu>) {
     commands.entity(menu.play_btn).despawn_recursive();
     commands.entity(menu.settings_btn).despawn_recursive();
     commands.entity(menu.quit_btn).despawn_recursive();
+    commands.entity(menu.about_btn).despawn_recursive();
 }
