@@ -12,7 +12,7 @@ on:
 
 env:
   # update with the name of the main binary
-  binary: dicey_dungeons
+  binary: 'Dicey Dungeons'
 
 
 jobs:
@@ -56,6 +56,7 @@ jobs:
           git branch gh-page origin/gh-page
           git checkout gh-page
           git checkout origin/master -- assets/
+          git reset
           git add assets/ *.js *.wasm
           git config user.name 'GitHub Workflow'
           git config user.email 'https://github.com/Arc676/Dicey-Dungeons/issues'
