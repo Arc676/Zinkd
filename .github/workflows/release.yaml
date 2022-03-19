@@ -33,24 +33,16 @@ jobs:
         run: |
           cargo build --release --target wasm32-unknown-unknown
 
-      - name: Prepare package
+      - name: Update web app
         run: |
-          wasm-bindgen --no-typescript --out-name bevy_game --out-dir wasm --target web target/wasm32-unknown-unknown/release/${{ env.binary }}.wasm
-          cp -r assets wasm/
-      - name: Package as a zip
-        uses: vimtor/action-zip@v1
-        with:
-          files: wasm
-          dest: ${{ env.binary }}.zip
-
-      - name: Upload binaries to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ env.binary }}.zip
-          asset_name: ${{ env.binary }}-wasm-${{ steps.get_version.outputs.tag }}.zip
-          tag: ${{ github.ref }}
-          overwrite: true
+          wasm-bindgen --no-typescript --out-name ${{ env.binary }} --out-dir . --target web target/wasm32-unknown-unknown/release/${{ env.binary }}.wasm
+          git fetch
+          git branch gh-page origin/gh-page
+          git checkout gh-page
+          git checkout master -- assets/
+          git add assets/ *.js *.wasm
+          git commit -m "Update WASM to $GIT_TAG_NAME"
+          git push
 
   # Build for Linux
   release-linux:
