@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - '*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag for which to update the web app"
+        required: true
 
 env:
   # update with the name of the main binary
@@ -17,9 +22,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # If running manually, get tag from user input
       - uses: little-core-labs/get-git-tag@v3.0.1
+        if: ${{ github.event.inputs.tag == '' }}
         id: get_version
+
+      # If no tag given, use existing environment variable
       - uses: actions/checkout@v2
+        if: ${{ github.event.inputs.tag == '' }}
+      # Otherwise, use user input
+      - uses: actions/checkout@v2
+        if: ${{ github.event.inputs.tag != '' }}
+        with:
+          ref: ${{ github.event.inputs.tag }}
+
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -32,21 +48,36 @@ jobs:
       - name: Build
         run: |
           cargo build --release --target wasm32-unknown-unknown
-
-      - name: Update web app
-        run: |
           wasm-bindgen --no-typescript --out-name ${{ env.binary }} --out-dir . --target web target/wasm32-unknown-unknown/release/${{ env.binary }}.wasm
+
+      - name: Set up Git environment
+        run: |
           git fetch
           git branch gh-page origin/gh-page
           git checkout gh-page
           git checkout origin/master -- assets/
           git add assets/ *.js *.wasm
+          git config user.name 'GitHub Workflow'
+          git config user.email 'https://github.com/Arc676/Dicey-Dungeons/issues'
+
+      - name: Update game
+        if: ${{ github.event.inputs.tag == '' }}
+        run: |
+          git commit -m "Update WASM to $GIT_TAG_NAME"
+          git push -u origin gh-page
+
+      - name: Update game
+        if: ${{ github.event.inputs.tag != '' }}
+        env:
+          GIT_TAG_NAME: ${{ github.event.inputs.tag }}
+        run: |
           git commit -m "Update WASM to $GIT_TAG_NAME"
           git push -u origin gh-page
 
   # Build for Linux
   release-linux:
     runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.tag == '' }}
 
     steps:
       - uses: little-core-labs/get-git-tag@v3.0.1
@@ -88,6 +119,7 @@ jobs:
   # Build for Windows
   release-windows:
     runs-on: windows-latest
+    if: ${{ github.event.inputs.tag == '' }}
 
     steps:
       - uses: little-core-labs/get-git-tag@v3.0.1
@@ -126,6 +158,7 @@ jobs:
   # Build for macOS
   release-macos:
     runs-on: macOS-latest
+    if: ${{ github.event.inputs.tag == '' }}
 
     steps:
       - uses: little-core-labs/get-git-tag@v3.0.1
