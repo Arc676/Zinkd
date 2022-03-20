@@ -141,7 +141,8 @@ impl WeightTransform {
 
     pub fn combined_with(&self, other: &WeightTransform) -> Self {
         let matrix = WeightTransform::matrix_product(&self.matrix, &other.matrix);
-        // debug_assert!(WeightTransform::is_unitary(&matrix));
+        #[cfg(debug_assertions)]
+        debug_assert!(WeightTransform::is_unitary(&matrix));
         WeightTransform { matrix }
     }
 
@@ -171,7 +172,8 @@ impl WeightTransform {
     }
 
     pub fn with_matrix(matrix: Matrix) -> Self {
-        // debug_assert!(WeightTransform::is_unitary(&matrix));
+        #[cfg(debug_assertions)]
+        debug_assert!(WeightTransform::is_unitary(&matrix));
         WeightTransform { matrix }
     }
 
@@ -189,7 +191,8 @@ impl WeightTransform {
         transform.matrix[v1][v2] = b;
         transform.matrix[v2][v1] = -b;
 
-        // debug_assert!(WeightTransform::is_unitary(&transform.matrix));
+        #[cfg(debug_assertions)]
+        debug_assert!(WeightTransform::is_unitary(&transform.matrix));
 
         transform
     }
