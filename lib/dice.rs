@@ -78,6 +78,13 @@ impl WeightedDie {
         self.weights
     }
 
+    pub fn expected_value(&self) -> f64 {
+        self.weights.iter().enumerate().fold(0., |mut acc, (i, x)| {
+            acc += i as f64 * x.norm_sqr();
+            acc
+        }) / 6.
+    }
+
     pub fn roll(&self) -> u32 {
         let mut roll: f64 = rand::thread_rng().gen_range(0.0..1.0);
         for (value, weight) in self.weights.iter().enumerate() {
@@ -206,6 +213,20 @@ impl WeightTransform {
             }
         }
         res
+    }
+
+    pub fn is_beneficial(&self, before: &WeightedDie) -> bool {
+        self.abs_benefit(before) > 0.
+    }
+
+    pub fn abs_benefit(&self, before: &WeightedDie) -> f64 {
+        let mut after = before.clone();
+        after.apply_transformation(self);
+        after.expected_value() - before.expected_value()
+    }
+
+    pub fn rel_benefit(&self, before: &WeightedDie) -> f64 {
+        self.abs_benefit(before) / before.expected_value()
     }
 }
 
