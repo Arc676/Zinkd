@@ -155,7 +155,7 @@ pub fn settings_ui(
     mut settings: ResMut<GameSettings>,
 ) {
     egui::CentralPanel::default().show(egui_context.ctx_mut(), |ui| {
-        ui.heading("Dicey Dungeons: Settings");
+        ui.heading("Zink'd: Settings");
 
         number_setting(ui, &mut settings.players, 2, 6, "Number of players");
         let size = settings.players as usize;
@@ -238,7 +238,7 @@ pub fn settings_ui(
 
 pub fn load_settings(mut settings: ResMut<GameSettings>) {
     #[cfg(feature = "serde")]
-    if let Some(dir) = ProjectDirs::from("", "", "Dicey Dungeons") {
+    if let Some(dir) = ProjectDirs::from("", "", "Zink'd") {
         let mut file = dir.config_dir().to_path_buf();
         file.push("settings.ron");
         let file = File::open(file);
@@ -255,7 +255,7 @@ pub fn load_settings(mut settings: ResMut<GameSettings>) {
 
 pub fn save_settings(settings: Res<GameSettings>) {
     #[cfg(feature = "serde")]
-    if let Some(dir) = ProjectDirs::from("", "", "Dicey Dungeons") {
+    if let Some(dir) = ProjectDirs::from("", "", "Zink'd") {
         let mut file = dir.config_dir().to_path_buf();
         create_dir_all(&file).expect("Failed to create config directory");
         file.push("settings.ron");

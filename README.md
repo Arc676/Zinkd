@@ -1,9 +1,9 @@
-# Dicey Dungeons
+# Zink'd
 
 A procedurally generated puzzle strategy game created for the first [Bevy Jam](https://itch.io/jam/bevy-jam-1).
 
 ## Licensing
-### Dicey Dungeons
+### Zink'd
 
 This project is available under the terms of the MIT license or the Apache 2.0 license, at your choosing. The full license texts are available in `licenses/`. For additional information regarding the asset licenses, see `licenses/CREDITS`.
 
