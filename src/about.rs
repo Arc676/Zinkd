@@ -38,14 +38,14 @@ use bevy_egui::{egui, EguiContext};
 
 pub fn about_ui(mut egui_context: ResMut<EguiContext>, mut state: ResMut<State<AppState>>) {
     egui::CentralPanel::default().show(egui_context.ctx_mut(), |ui| {
-        ui.heading("About Dicey Dungeons");
+        ui.heading("About Zink'd");
 
         ui.label("Project by Arc676/Alessandro Vinciguerra and Fatcat590. Created for the first Bevy Jam");
 
         ui.label("This project is available under the terms of the MIT license or the Apache 2.0 license, at your option. You should have received copies of the licenses with this game. If not, you can find them in the repositories.");
         ui.horizontal(|ui| {
-            ui.hyperlink_to("GitHub repository", "https://github.com/Arc676/Dicey-Dungeons");
-            ui.hyperlink_to("GitLab repository", "https://gitlab.com/Arc676/dicey-dungeons");
+            ui.hyperlink_to("GitHub repository", "https://github.com/Arc676/Zinkd");
+            ui.hyperlink_to("GitLab repository", "https://gitlab.com/Arc676/zinkd");
             ui.hyperlink_to("Bevy Jam", "https://itch.io/jam/bevy-jam-1");
         });
 

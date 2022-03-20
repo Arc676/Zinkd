@@ -37,12 +37,12 @@ use crate::AppState;
 use bevy::prelude::*;
 use bevy::{ecs::component::Component, input::mouse::MouseWheel};
 use bevy_egui::{egui, EguiContext};
-use dicey_dungeons::dice::WeightedDie;
-use dicey_dungeons::items::ItemType;
-use dicey_dungeons::map::Direction;
-use dicey_dungeons::map::*;
-use dicey_dungeons::player::Player;
 use std::f32::consts::{FRAC_PI_2, PI};
+use zinkd::dice::WeightedDie;
+use zinkd::items::ItemType;
+use zinkd::map::Direction;
+use zinkd::map::*;
+use zinkd::player::Player;
 
 #[derive(Component)]
 pub struct MainCamera;

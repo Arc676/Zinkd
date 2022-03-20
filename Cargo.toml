@@ -1,5 +1,5 @@
 [package]
-name = "dicey_dungeons"
+name = "zinkd"
 version = "0.2.0"
 edition = "2021"
 authors = ["Arc676/Alessandro Vinciguerra <alesvinciguerra@gmail.com>", "Fatcat560 <s.mario95@googlemail.com>"]
@@ -23,10 +23,10 @@ num-traits = "0.2.14"
 default = ["serde"]
 
 [lib]
-name = "dicey_dungeons"
+name = "zinkd"
 path = "lib/lib.rs"
 crate-type = ["lib"]
 
 [[bin]]
-name = "dicey_dungeons"
+name = "zinkd"
 path = "src/main.rs"
