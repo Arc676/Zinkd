@@ -42,7 +42,7 @@ use zinkd::dice::WeightedDie;
 use zinkd::items::ItemType;
 use zinkd::map::Direction;
 use zinkd::map::*;
-use zinkd::player::Player;
+use zinkd::player::{Player, PlayerType};
 
 #[derive(Component)]
 pub struct MainCamera;
@@ -264,7 +264,7 @@ pub fn setup_game(
     {
         let Coordinates(x, y) = spawn_pos;
         player_names.push(name.clone());
-        let player = Player::spawn_at(*spawn_pos, name.clone(), num as u32);
+        let player = Player::spawn_at(*spawn_pos, name.clone(), num as u32, PlayerType::LocalHuman);
 
         let texture = asset_server.load(sprite.path());
         let translation = coords_to_vec(*x, *y, 1.);

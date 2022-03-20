@@ -38,6 +38,12 @@ use crate::map::{Coordinates, Direction, GridCell, Map};
 use bevy::ecs::component::Component;
 use std::slice::Iter;
 
+#[derive(Copy, Clone)]
+pub enum PlayerType {
+    LocalHuman,
+    Computer,
+}
+
 #[derive(Component)]
 pub struct Player {
     name: String,
@@ -45,21 +51,32 @@ pub struct Player {
     inventory: Vec<HeldItem>,
     die: WeightedDie,
     player_number: u32,
+    ptype: PlayerType,
 }
 
 impl Player {
-    pub fn spawn_at(position: Coordinates, name: String, player_number: u32) -> Self {
+    pub fn spawn_at(
+        position: Coordinates,
+        name: String,
+        player_number: u32,
+        ptype: PlayerType,
+    ) -> Self {
         Player {
             name,
             position,
             inventory: vec![],
             die: WeightedDie::fair_die(),
             player_number,
+            ptype,
         }
     }
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn get_type(&self) -> PlayerType {
+        self.ptype
     }
 
     pub fn player_number(&self) -> u32 {
