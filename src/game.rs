@@ -260,15 +260,16 @@ pub fn setup_game(
     commands.spawn_batch(sprites);
 
     let mut player_names = vec![];
-    for (num, ((sprite, name), spawn_pos)) in settings
+    for (num, (((sprite, name), ptype), spawn_pos)) in settings
         .player_sprites_iter()
         .zip(settings.player_names_iter())
+        .zip(settings.player_types_iter())
         .zip(map.starting_positions())
         .enumerate()
     {
         let Coordinates(x, y) = spawn_pos;
         player_names.push(name.clone());
-        let player = Player::spawn_at(*spawn_pos, name.clone(), num as u32, PlayerType::LocalHuman);
+        let player = Player::spawn_at(*spawn_pos, name.clone(), num as u32, *ptype);
 
         let texture = asset_server.load(sprite.path());
         let translation = coords_to_vec(*x, *y, 1.);
@@ -440,8 +441,16 @@ pub fn update_game(
                 GameAction::UsingItem => {}
                 GameAction::Moving(_, remaining) => {
                     if game_state.current_move.is_none() {
-                        if let Some(Control::Move(step)) = get_control(&keyboard) {
-                            game_state.current_move = Some(step);
+                        match player.get_type() {
+                            PlayerType::LocalHuman => {
+                                if let Some(Control::Move(step)) = get_control(&keyboard) {
+                                    game_state.current_move = Some(step);
+                                }
+                            }
+                            PlayerType::Computer(algorithm) => {
+                                game_state.current_move =
+                                    Some(algorithm.compute_move(player.position(), &map));
+                            }
                         }
                     } else {
                         game_state.time_since_last_move += time.delta();
