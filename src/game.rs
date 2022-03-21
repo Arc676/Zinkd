@@ -424,21 +424,28 @@ pub fn update_game(
     for (mut player, mut transform, mut sprite) in player_query.iter_mut() {
         if game_state.active_player == player.player_number() {
             match game_state.current_action {
-                GameAction::WaitForInput => {
-                    if let Some(action) = get_control(&keyboard) {
-                        match action {
-                            Control::Roll => {
-                                let rolled = player.roll();
-                                game_state.rolled_value = Some(rolled);
-                                game_state.current_action = GameAction::Moving(0, rolled);
+                GameAction::WaitForInput => match player.get_type() {
+                    PlayerType::LocalHuman => {
+                        if let Some(action) = get_control(&keyboard) {
+                            match action {
+                                Control::Roll => {
+                                    let rolled = player.roll();
+                                    game_state.rolled_value = Some(rolled);
+                                    game_state.current_action = GameAction::Moving(0, rolled);
+                                }
+                                Control::Inventory => {
+                                    game_state.inventory_visible = !game_state.inventory_visible
+                                }
+                                _ => (),
                             }
-                            Control::Inventory => {
-                                game_state.inventory_visible = !game_state.inventory_visible
-                            }
-                            _ => (),
                         }
                     }
-                }
+                    PlayerType::Computer(_) => {
+                        let rolled = player.roll();
+                        game_state.rolled_value = Some(rolled);
+                        game_state.current_action = GameAction::Moving(0, rolled);
+                    }
+                },
                 GameAction::UsingItem => {}
                 GameAction::Moving(_, remaining) => {
                     match player.get_type() {
