@@ -35,13 +35,25 @@
 use crate::dice::{WeightTransform, WeightedDie};
 use crate::items::{HeldItem, ItemType};
 use crate::map::{Coordinates, Direction, GridCell, Map};
+use crate::npc::Algorithm;
 use bevy::ecs::component::Component;
+use std::fmt::{Display, Formatter};
 use std::slice::Iter;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub enum PlayerType {
     LocalHuman,
-    Computer,
+    Computer(Algorithm),
+}
+
+impl Display for PlayerType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PlayerType::LocalHuman => write!(f, "Human"),
+            PlayerType::Computer(algorithm) => write!(f, "Computer ({})", algorithm),
+        }
+    }
 }
 
 #[derive(Component)]

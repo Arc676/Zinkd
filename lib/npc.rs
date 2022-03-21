@@ -33,6 +33,21 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 use crate::map::{Coordinates, Direction, GridCell, Map, EAST, NORTH, SOUTH, WEST};
+use std::fmt::{Display, Formatter};
+
+#[derive(Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+pub enum Algorithm {
+    ShortestPath,
+}
+
+impl Display for Algorithm {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Algorithm::ShortestPath => write!(f, "Shortest Path"),
+        }
+    }
+}
 
 pub fn shortest_path(start: Coordinates, map: &Map) -> Direction {
     let mut min_distance = usize::MAX;
