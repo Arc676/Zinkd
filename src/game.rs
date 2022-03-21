@@ -444,6 +444,19 @@ pub fn update_game(
                         PlayerType::LocalHuman => {
                             if game_state.current_move.is_none() {
                                 if let Some(Control::Move(step)) = get_control(&keyboard) {
+                                    let previous = player.last_move();
+                                    if directions_are_opposite(step, previous) {
+                                        if let GridCell::Path(exits, _) =
+                                            map.cell_at(player.position())
+                                        {
+                                            match *exits {
+                                                NORTH | SOUTH | EAST | WEST => {}
+                                                _ => return,
+                                            }
+                                        } else {
+                                            panic!("Player not on a path");
+                                        }
+                                    }
                                     game_state.current_move = Some(step);
                                 }
                             } else {
