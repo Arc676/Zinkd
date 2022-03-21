@@ -440,23 +440,32 @@ pub fn update_game(
                 }
                 GameAction::UsingItem => {}
                 GameAction::Moving(_, remaining) => {
-                    if game_state.current_move.is_none() {
-                        match player.get_type() {
-                            PlayerType::LocalHuman => {
+                    match player.get_type() {
+                        PlayerType::LocalHuman => {
+                            if game_state.current_move.is_none() {
                                 if let Some(Control::Move(step)) = get_control(&keyboard) {
                                     game_state.current_move = Some(step);
                                 }
+                            } else {
+                                game_state.time_since_last_move += time.delta();
+                                if game_state.time_since_last_move.as_secs_f32()
+                                    < game_state.tile_walk_time
+                                {
+                                    return;
+                                }
                             }
-                            PlayerType::Computer(algorithm) => {
+                        }
+                        PlayerType::Computer(algorithm) => {
+                            if game_state.current_move.is_none() {
                                 game_state.current_move =
                                     Some(algorithm.compute_move(player.position(), &map));
                             }
-                        }
-                    } else {
-                        game_state.time_since_last_move += time.delta();
-                        if game_state.time_since_last_move.as_secs_f32() < game_state.tile_walk_time
-                        {
-                            return;
+                            game_state.time_since_last_move += time.delta();
+                            if game_state.time_since_last_move.as_secs_f32()
+                                < game_state.tile_walk_time
+                            {
+                                return;
+                            }
                         }
                     }
                     if let Some(step) = game_state.current_move {
