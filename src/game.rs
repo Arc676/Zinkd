@@ -37,6 +37,7 @@ use crate::AppState;
 use bevy::prelude::*;
 use bevy::{ecs::component::Component, input::mouse::MouseWheel};
 use bevy_egui::{egui, EguiContext};
+use itertools::izip;
 use std::f32::consts::{FRAC_PI_2, PI};
 use std::time::Duration;
 use zinkd::dice::WeightedDie;
@@ -260,16 +261,16 @@ pub fn setup_game(
     commands.spawn_batch(sprites);
 
     let mut player_names = vec![];
-    for (num, (((sprite, name), ptype), spawn_pos)) in settings
-        .player_sprites_iter()
-        .zip(settings.player_names_iter())
-        .zip(settings.player_types_iter())
-        .zip(map.starting_positions())
-        .enumerate()
-    {
+    for (num, sprite, name, ptype, spawn_pos) in izip!(
+        0..settings.players(),
+        settings.player_sprites_iter(),
+        settings.player_names_iter(),
+        settings.player_types_iter(),
+        map.starting_positions()
+    ) {
         let Coordinates(x, y) = spawn_pos;
         player_names.push(name.clone());
-        let player = Player::spawn_at(*spawn_pos, name.clone(), num as u32, *ptype);
+        let player = Player::spawn_at(*spawn_pos, name.clone(), num, *ptype);
 
         let texture = asset_server.load(sprite.path());
         let translation = coords_to_vec(*x, *y, 1.);
