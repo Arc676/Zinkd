@@ -160,72 +160,69 @@ pub fn setup_game(
         let mut rotation = Quat::IDENTITY;
         let texture = match cell {
             GridCell::Wall => wall.clone(),
-            GridCell::Path(direction, item) => {
-                if let Some(item) = item {
-                    let translation = coords_to_vec(x, y, 0.5);
-                    commands
-                        .spawn_bundle(SpriteBundle {
-                            texture: item_sprite.clone(),
-                            transform: Transform {
-                                translation,
-                                ..Default::default()
-                            },
-                            sprite: Sprite {
-                                custom_size: Some(tile_size),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        })
-                        .insert(EntityTooltip(item.short_description().to_string()));
+            GridCell::Path(direction, _) | GridCell::Goal(direction) => match *direction {
+                OMNIDIRECTIONAL => omnidirectional.clone(),
+                LONGITUDINAL | LATITUDINAL => {
+                    if *direction == LATITUDINAL {
+                        rotation = Quat::from_rotation_z(FRAC_PI_2);
+                    }
+                    straight.clone()
                 }
-                match *direction {
-                    OMNIDIRECTIONAL => omnidirectional.clone(),
-                    LONGITUDINAL | LATITUDINAL => {
-                        if *direction == LATITUDINAL {
-                            rotation = Quat::from_rotation_z(FRAC_PI_2);
-                        }
-                        straight.clone()
+                NORTH | EAST | SOUTH | WEST => {
+                    match *direction {
+                        NORTH => rotation = Quat::from_rotation_z(PI),
+                        EAST => rotation = Quat::from_rotation_z(FRAC_PI_2),
+                        WEST => rotation = Quat::from_rotation_z(-FRAC_PI_2),
+                        _ => (),
                     }
-                    NORTH | EAST | SOUTH | WEST => {
-                        match *direction {
-                            NORTH => rotation = Quat::from_rotation_z(PI),
-                            EAST => rotation = Quat::from_rotation_z(FRAC_PI_2),
-                            WEST => rotation = Quat::from_rotation_z(-FRAC_PI_2),
-                            _ => (),
-                        }
-                        dead_end.clone()
+                    dead_end.clone()
+                }
+                NOT_NORTH | NOT_EAST | NOT_SOUTH | NOT_WEST => {
+                    match *direction {
+                        NOT_NORTH => rotation = Quat::from_rotation_z(-FRAC_PI_2),
+                        NOT_SOUTH => rotation = Quat::from_rotation_z(FRAC_PI_2),
+                        NOT_EAST => rotation = Quat::from_rotation_z(PI),
+                        _ => (),
                     }
-                    NOT_NORTH | NOT_EAST | NOT_SOUTH | NOT_WEST => {
-                        match *direction {
-                            NOT_NORTH => rotation = Quat::from_rotation_z(-FRAC_PI_2),
-                            NOT_SOUTH => rotation = Quat::from_rotation_z(FRAC_PI_2),
-                            NOT_EAST => rotation = Quat::from_rotation_z(PI),
-                            _ => (),
-                        }
-                        t_intersection.clone()
+                    t_intersection.clone()
+                }
+                NORTHEAST | NORTHWEST | SOUTHEAST | SOUTHWEST => {
+                    match *direction {
+                        NORTHEAST => rotation = Quat::from_rotation_z(PI),
+                        NORTHWEST => rotation = Quat::from_rotation_z(-FRAC_PI_2),
+                        SOUTHEAST => rotation = Quat::from_rotation_z(FRAC_PI_2),
+                        _ => (),
                     }
-                    NORTHEAST | NORTHWEST | SOUTHEAST | SOUTHWEST => {
-                        match *direction {
-                            NORTHEAST => rotation = Quat::from_rotation_z(PI),
-                            NORTHWEST => rotation = Quat::from_rotation_z(-FRAC_PI_2),
-                            SOUTHEAST => rotation = Quat::from_rotation_z(FRAC_PI_2),
-                            _ => (),
-                        }
-                        corner.clone()
-                    }
-                    _ => {
-                        if cfg!(debug_assertions) {
-                            dbg!("Unknown direction {}", direction);
-                            rotation = Quat::from_rotation_z(PI);
-                            goal.clone()
-                        } else {
-                            wall.clone()
-                        }
+                    corner.clone()
+                }
+                _ => {
+                    if cfg!(debug_assertions) {
+                        dbg!("Unknown direction {}", direction);
+                        rotation = Quat::from_rotation_z(PI);
+                        goal.clone()
+                    } else {
+                        wall.clone()
                     }
                 }
-            }
-            GridCell::Goal => goal.clone(),
+            },
         };
+        if let GridCell::Path(_, Some(item)) = cell {
+            let translation = coords_to_vec(x, y, 0.5);
+            commands
+                .spawn_bundle(SpriteBundle {
+                    texture: item_sprite.clone(),
+                    transform: Transform {
+                        translation,
+                        ..Default::default()
+                    },
+                    sprite: Sprite {
+                        custom_size: Some(tile_size),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .insert(EntityTooltip(item.short_description().to_string()));
+        }
         let translation = coords_to_vec(x, y, 0.);
         sprites.push(SpriteBundle {
             texture,
@@ -240,6 +237,21 @@ pub fn setup_game(
             },
             ..Default::default()
         });
+        if let GridCell::Goal(_) = cell {
+            let translation = coords_to_vec(x, y, 0.1);
+            sprites.push(SpriteBundle {
+                texture: goal.clone(),
+                transform: Transform {
+                    translation,
+                    ..Default::default()
+                },
+                sprite: Sprite {
+                    custom_size: Some(tile_size),
+                    ..Default::default()
+                },
+                ..Default::default()
+            });
+        }
     }
     commands.spawn_batch(sprites);
 
@@ -438,7 +450,7 @@ pub fn update_game(
                                         }
                                     }
                                 }
-                                GridCell::Goal => {
+                                GridCell::Goal(_) => {
                                     game_state.winners.push(player.player_number());
                                     game_state.winner_names.push(player.name().to_string());
                                     game_state.current_action = GameAction::HasMoved;

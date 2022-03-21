@@ -83,7 +83,7 @@ impl Player {
                     return false;
                 }
             }
-            GridCell::Goal => {}
+            GridCell::Goal(_) => {}
         }
         if !current.step(direction, map.width(), map.height()) {
             return false;

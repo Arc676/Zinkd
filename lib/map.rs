@@ -71,7 +71,7 @@ pub fn directions_are_opposite(a: Direction, b: Direction) -> bool {
 pub enum GridCell {
     Wall,
     Path(Direction, items::PossibleItem),
-    Goal,
+    Goal(Direction),
 }
 
 #[derive(Copy, Clone, PartialEq)]
@@ -142,7 +142,7 @@ impl Map {
         // Randomly place goal
         let goal = map.get_random_cell();
         map.goal = goal;
-        map.set_cell(goal, GridCell::Goal);
+        map.set_cell(goal, GridCell::Goal(0));
 
         // Set random starting positions for players
         for _ in 0..players {
@@ -188,10 +188,9 @@ impl Map {
         let Coordinates(x, y) = coordinates;
         match &mut self.grid[y][x] {
             GridCell::Wall => self.set_cell(coordinates, GridCell::Path(direction, None)),
-            GridCell::Path(existing, _) => {
+            GridCell::Path(existing, _) | GridCell::Goal(existing) => {
                 *existing |= direction;
             }
-            GridCell::Goal => (),
         }
     }
 
@@ -207,7 +206,7 @@ impl Map {
         let mut cell = self.get_random_cell();
         loop {
             match self.cell_at(cell) {
-                GridCell::Goal => {}
+                GridCell::Goal(_) => {}
                 _ => {
                     if self.starting_points.contains(&cell) {
                         cell = self.get_random_cell();
@@ -360,7 +359,7 @@ mod tests {
                         }
                     }
                 },
-                GridCell::Goal => '*',
+                GridCell::Goal(_) => '*',
             };
         }
 
