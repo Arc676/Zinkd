@@ -362,6 +362,11 @@ impl Map {
         self.starting_points.iter()
     }
 
+    pub fn distance_to_goal(&self, coordinates: Coordinates) -> Option<usize> {
+        let Coordinates(x, y) = coordinates;
+        self.distances[y][x]
+    }
+
     pub fn cell_at(&self, coordinates: Coordinates) -> &GridCell {
         let Coordinates(x, y) = coordinates;
         &self.grid[y][x]

@@ -32,8 +32,26 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-pub mod dice;
-pub mod items;
-pub mod map;
-pub mod npc;
-pub mod player;
+use crate::map::{Coordinates, Direction, GridCell, Map, EAST, NORTH, SOUTH, WEST};
+
+pub fn shortest_path(start: Coordinates, map: &Map) -> Direction {
+    let mut min_distance = usize::MAX;
+    let mut best_direction = 0;
+    let exits = match map.cell_at(start) {
+        GridCell::Wall => panic!("Cannot navigate from inside a wall"),
+        GridCell::Path(directions, _) => *directions,
+        GridCell::Goal(_) => 0,
+    };
+    for direction in [NORTH, EAST, SOUTH, WEST] {
+        if exits & direction != 0 {
+            let mut cell = start.clone();
+            cell.step(direction, map.width(), map.height());
+            let distance = map.distance_to_goal(cell).unwrap();
+            if distance < min_distance {
+                min_distance = distance;
+                best_direction = direction;
+            }
+        }
+    }
+    best_direction
+}
