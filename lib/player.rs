@@ -52,6 +52,7 @@ pub struct Player {
     die: WeightedDie,
     player_number: u32,
     ptype: PlayerType,
+    moves: Vec<Direction>,
 }
 
 impl Player {
@@ -68,6 +69,7 @@ impl Player {
             die: WeightedDie::fair_die(),
             player_number,
             ptype,
+            moves: vec![],
         }
     }
 
@@ -147,5 +149,17 @@ impl Player {
 
     pub fn roll(&self) -> u32 {
         self.die.roll()
+    }
+
+    pub fn make_move(&mut self, direction: Direction) {
+        self.moves.push(direction);
+    }
+
+    pub fn last_move(&self) -> Direction {
+        *self.moves.last().unwrap_or(&0)
+    }
+
+    pub fn end_turn(&mut self) {
+        self.moves.clear();
     }
 }

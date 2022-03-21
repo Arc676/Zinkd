@@ -435,6 +435,9 @@ pub fn update_game(
                             transform.translation =
                                 Vec2::new(x as f32 * 96., y as f32 * 96.).extend(1.);
                             sprite.flip_x = step == WEST;
+                            if step != player.last_move() {
+                                player.make_move(step);
+                            }
                             match map.cell_at_mut(position) {
                                 GridCell::Path(_, item) if item.is_some() => {
                                     let item = item.take().unwrap();
@@ -475,6 +478,7 @@ pub fn update_game(
                                 game_state.inventory_visible = !game_state.inventory_visible
                             }
                             Control::EndTurn => {
+                                player.end_turn();
                                 if game_state.winners.len() == game_state.player_count as usize - 1
                                 {
                                     game_state.game_over = true;
