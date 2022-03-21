@@ -38,6 +38,7 @@ use bevy::prelude::*;
 use bevy::{ecs::component::Component, input::mouse::MouseWheel};
 use bevy_egui::{egui, EguiContext};
 use std::f32::consts::{FRAC_PI_2, PI};
+use std::time::Duration;
 use zinkd::dice::WeightedDie;
 use zinkd::items::ItemType;
 use zinkd::map::Direction;
@@ -104,6 +105,9 @@ pub struct GameState {
     camera_zoom: f32,
     left_panel_width: f32,
     right_panel_width: f32,
+    time_since_last_move: Duration,
+    current_move: Option<Direction>,
+    tile_walk_time: f32,
 }
 
 impl GameState {
@@ -307,6 +311,7 @@ pub fn setup_game(
         camera_follows_player: true,
         camera_auto_zoom: true,
         camera_default_zoom: settings.default_zoom_level(),
+        tile_walk_time: 1. / settings.walking_speed(),
         ..Default::default()
     });
 }
@@ -397,8 +402,14 @@ pub fn entity_tooltips(
     game_state.hover_item = None;
 }
 
+fn clear_move(game_state: &mut GameState) {
+    game_state.current_move = None;
+    game_state.time_since_last_move = Duration::ZERO;
+}
+
 pub fn update_game(
     mut commands: Commands,
+    time: Res<Time>,
     mut game_state: ResMut<GameState>,
     keyboard: Res<Input<KeyCode>>,
     mut map: ResMut<Map>,
@@ -428,7 +439,18 @@ pub fn update_game(
                 }
                 GameAction::UsingItem => {}
                 GameAction::Moving(_, remaining) => {
-                    if let Some(Control::Move(step)) = get_control(&keyboard) {
+                    if game_state.current_move.is_none() {
+                        if let Some(Control::Move(step)) = get_control(&keyboard) {
+                            game_state.current_move = Some(step);
+                        }
+                    } else {
+                        game_state.time_since_last_move += time.delta();
+                        if game_state.time_since_last_move.as_secs_f32() < game_state.tile_walk_time
+                        {
+                            return;
+                        }
+                    }
+                    if let Some(step) = game_state.current_move {
                         if player.step(step, &map) {
                             let position = player.position();
                             let Coordinates(x, y) = position;
@@ -439,18 +461,30 @@ pub fn update_game(
                             if step != player.last_move() {
                                 player.append_move(step);
                             }
+                            game_state.time_since_last_move = Duration::ZERO;
                             match map.cell_at_mut(position) {
-                                GridCell::Path(_, item) if item.is_some() => {
-                                    let item = item.take().unwrap();
-                                    game_state.picked_up_item =
-                                        Some(item.short_description().to_string());
-                                    player.pick_up(item);
-                                    for (entity, item_transform, _) in item_query.iter() {
-                                        if item_transform.translation.truncate()
-                                            == transform.translation.truncate()
-                                        {
-                                            commands.entity(entity).despawn();
-                                            break;
+                                GridCell::Path(exits, item) => {
+                                    // Ignore the direction from which the player came. If the current
+                                    // tile allows moving in any direction other than the direction in which
+                                    // the player is already moving, then stop moving. Otherwise keep walking.
+                                    let backwards = get_opposite_direction(step);
+                                    if *exits & !backwards != step {
+                                        clear_move(&mut game_state);
+                                    }
+
+                                    // Check for items
+                                    if item.is_some() {
+                                        let item = item.take().unwrap();
+                                        game_state.picked_up_item =
+                                            Some(item.short_description().to_string());
+                                        player.pick_up(item);
+                                        for (entity, item_transform, _) in item_query.iter() {
+                                            if item_transform.translation.truncate()
+                                                == transform.translation.truncate()
+                                            {
+                                                commands.entity(entity).despawn();
+                                                break;
+                                            }
                                         }
                                     }
                                 }
@@ -458,7 +492,8 @@ pub fn update_game(
                                     game_state.winners.push(player.player_number());
                                     game_state.winner_names.push(player.name().to_string());
                                     game_state.current_action = GameAction::HasMoved;
-                                    break;
+                                    clear_move(&mut game_state);
+                                    return;
                                 }
                                 _ => (),
                             }
@@ -466,6 +501,7 @@ pub fn update_game(
                             step_count -= 1;
                             if step_count == 0 {
                                 game_state.current_action = GameAction::HasMoved;
+                                clear_move(&mut game_state);
                             } else {
                                 game_state.current_action = GameAction::Moving(step, step_count);
                             }

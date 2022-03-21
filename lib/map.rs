@@ -64,7 +64,17 @@ pub fn directions_are_opposite(a: Direction, b: Direction) -> bool {
         SOUTH => b == NORTH,
         EAST => b == WEST,
         WEST => b == EAST,
-        _ => panic!("Unknown direction"),
+        _ => panic!("Unsupported direction"),
+    }
+}
+
+pub fn get_opposite_direction(d: Direction) -> Direction {
+    match d {
+        NORTH => SOUTH,
+        SOUTH => NORTH,
+        EAST => WEST,
+        WEST => EAST,
+        _ => panic!("Unsupported direction"),
     }
 }
 
