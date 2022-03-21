@@ -409,6 +409,20 @@ mod tests {
         });
         println!("@@@@@@@@@@@@\n{}@@@@@@@@@@@@", rendered);
 
-        println!("{:?}", map.distances);
+        let rendered = map.distances.iter().fold(String::new(), |mut text, row| {
+            text.push('@');
+            text.push_str(
+                row.iter()
+                    .map(|d| match d {
+                        None => "x".to_string(),
+                        Some(d) => format!("{}", d),
+                    })
+                    .collect::<String>()
+                    .as_str(),
+            );
+            text.push_str("@\n");
+            text
+        });
+        println!("@@@@@@@@@@@@\n{}@@@@@@@@@@@@", rendered);
     }
 }
