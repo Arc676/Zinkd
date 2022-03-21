@@ -49,7 +49,15 @@ impl Display for Algorithm {
     }
 }
 
-pub fn shortest_path(start: Coordinates, map: &Map) -> Direction {
+impl Algorithm {
+    pub fn compute_move(&self, start: Coordinates, map: &Map) -> Direction {
+        match self {
+            Algorithm::ShortestPath => shortest_path(start, map),
+        }
+    }
+}
+
+fn shortest_path(start: Coordinates, map: &Map) -> Direction {
     let mut min_distance = usize::MAX;
     let mut best_direction = 0;
     let exits = match map.cell_at(start) {
