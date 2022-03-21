@@ -44,6 +44,8 @@ use std::fmt::Formatter;
 use std::fs::{create_dir_all, File};
 use std::io::{Read, Write};
 use std::slice::Iter;
+use zinkd::npc::Algorithm;
+use zinkd::player::PlayerType;
 
 #[derive(Copy, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
@@ -80,6 +82,7 @@ pub struct GameSettings {
     players: u32,
     player_sprites: Vec<PlayerSprite>,
     player_names: Vec<String>,
+    player_types: Vec<PlayerType>,
     map_width: usize,
     map_height: usize,
     item_density: f64,
@@ -94,6 +97,10 @@ impl Default for GameSettings {
             players: 2,
             player_sprites: vec![PlayerSprite::Ferris, PlayerSprite::Darryl],
             player_names: vec!["Ferris".to_string(), "Darryl".to_string()],
+            player_types: vec![
+                PlayerType::LocalHuman,
+                PlayerType::Computer(Algorithm::ShortestPath),
+            ],
             map_width: 60,
             map_height: 60,
             item_density: 0.1,
@@ -119,6 +126,10 @@ impl GameSettings {
 
     pub fn player_names_iter(&self) -> Iter<'_, String> {
         self.player_names.iter()
+    }
+
+    pub fn player_types_iter(&self) -> Iter<'_, PlayerType> {
+        self.player_types.iter()
     }
 
     pub fn map_width(&self) -> usize {
@@ -168,13 +179,16 @@ pub fn settings_ui(
         if size > settings.player_sprites.len() {
             settings.player_sprites.resize(size, PlayerSprite::Ferris);
             settings.player_names.resize(size, "New Player".to_string());
+            settings.player_types.resize(size, PlayerType::LocalHuman);
         }
 
-        ui.label("Choose player names and sprites");
         for i in 0..settings.players {
+            ui.label(format!("Player {}", i + 1));
             ui.horizontal(|ui| {
-                ui.label(format!("Player {}:", i + 1));
+                ui.label("Name:");
                 ui.text_edit_singleline(&mut settings.player_names[i as usize]);
+
+                ui.label("Avatar:");
                 let sprite = &mut settings.player_sprites[i as usize];
                 egui::ComboBox::from_id_source(format!("sprite_picker_{}", i))
                     .selected_text(sprite.to_string())
@@ -190,6 +204,23 @@ pub fn settings_ui(
                             PlayerSprite::Darryl.to_string(),
                         );
                     });
+
+                ui.label("Type:");
+                let ptype = &mut settings.player_types[i as usize];
+                egui::ComboBox::from_id_source(format!("type_picker_{}", i))
+                    .selected_text(ptype.to_string())
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(
+                            ptype,
+                            PlayerType::LocalHuman,
+                            PlayerType::LocalHuman.to_string(),
+                        );
+                        ui.selectable_value(
+                            ptype,
+                            PlayerType::Computer(Algorithm::ShortestPath),
+                            PlayerType::Computer(Algorithm::ShortestPath).to_string(),
+                        )
+                    })
             });
         }
 
