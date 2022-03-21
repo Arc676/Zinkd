@@ -380,17 +380,16 @@ mod tests {
                     SOUTH => 'v',
                     EAST => '>',
                     WEST => '<',
-                    _ => {
-                        if direction == NORTH | SOUTH {
-                            '|'
-                        } else if direction == EAST | WEST {
-                            '-'
-                        } else if direction == NORTH | EAST | SOUTH | WEST {
-                            '+'
-                        } else {
-                            '?'
-                        }
-                    }
+                    LONGITUDINAL => '|',
+                    LATITUDINAL => '-',
+                    OMNIDIRECTIONAL => '+',
+                    NORTHEAST => 'L',
+                    NOT_NORTH => 'T',
+                    SOUTHEAST => 'Γ',
+                    SOUTHWEST => '¬',
+                    NOT_SOUTH => '⊥',
+                    NOT_WEST => '⊢',
+                    _ => '?',
                 },
                 GridCell::Goal(_) => '*',
             };
