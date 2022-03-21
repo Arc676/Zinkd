@@ -435,8 +435,9 @@ pub fn update_game(
                             transform.translation =
                                 Vec2::new(x as f32 * 96., y as f32 * 96.).extend(1.);
                             sprite.flip_x = step == WEST;
+                            // If moving in a new direction, add the new direction to the move list
                             if step != player.last_move() {
-                                player.make_move(step);
+                                player.append_move(step);
                             }
                             match map.cell_at_mut(position) {
                                 GridCell::Path(_, item) if item.is_some() => {

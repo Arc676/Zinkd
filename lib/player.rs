@@ -151,7 +151,7 @@ impl Player {
         self.die.roll()
     }
 
-    pub fn make_move(&mut self, direction: Direction) {
+    pub fn append_move(&mut self, direction: Direction) {
         self.moves.push(direction);
     }
 
