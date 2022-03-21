@@ -130,7 +130,7 @@ pub struct Map {
 
 macro_rules! dfs_compute_distances {
     ($map:expr, $exits:ident, $dir:ident, $x:expr, $y:expr, $dist:expr) => {
-        if $exits & $dir != 0 && $map.distances[$y][$x].is_none() {
+        if $exits & $dir != 0 {
             let next = Coordinates($x, $y);
             $map.compute_distances(next, $dist);
         }
@@ -196,21 +196,71 @@ impl Map {
         map
     }
 
-    fn compute_distances(&mut self, start: Coordinates, distance: usize) {
-        let Coordinates(x, y) = start;
-        let mut to_check = 0;
-        self.distances[y][x] = match self.cell_at(start) {
-            GridCell::Wall => None,
-            GridCell::Path(exits, _) | GridCell::Goal(exits) => {
-                to_check = *exits;
-                Some(distance)
+    fn compute_distances(&mut self, mut cell: Coordinates, mut distance: usize) {
+        let Coordinates(mut x, mut y) = cell;
+        // Optimize recursion depth by searching straight paths iteratively
+        loop {
+            // First determine the possible travel directions from the current cell
+            // and store the distance of this cell from the goal
+            let mut to_check = 0;
+            self.distances[y][x] = match self.cell_at(cell) {
+                GridCell::Wall => None,
+                GridCell::Path(exits, _) | GridCell::Goal(exits) => {
+                    to_check = *exits;
+                    Some(distance)
+                }
+            };
+            if to_check == 0 {
+                return;
             }
-        };
-        if to_check != 0 {
-            dfs_compute_distances!(self, to_check, NORTH, x, y + 1, distance + 1);
-            dfs_compute_distances!(self, to_check, SOUTH, x, y - 1, distance + 1);
-            dfs_compute_distances!(self, to_check, EAST, x + 1, y, distance + 1);
-            dfs_compute_distances!(self, to_check, WEST, x - 1, y, distance + 1);
+            // Eliminate directions that do not need to be searched
+            // because they lead out of bounds
+            if x == 0 {
+                to_check &= !WEST;
+            } else if let Some(d) = self.distances[y][x - 1] {
+                if d <= distance + 1 {
+                    to_check &= !WEST;
+                }
+            }
+            if x + 1 >= self.width() {
+                to_check &= !EAST;
+            } else if let Some(d) = self.distances[y][x + 1] {
+                if d <= distance + 1 {
+                    to_check &= !EAST;
+                }
+            }
+            if y == 0 {
+                to_check &= !SOUTH;
+            } else if let Some(d) = self.distances[y - 1][x] {
+                if d <= distance + 1 {
+                    to_check &= !SOUTH;
+                }
+            }
+            if y + 1 >= self.height() {
+                to_check &= !NORTH;
+            } else if let Some(d) = self.distances[y + 1][x] {
+                if d <= distance + 1 {
+                    to_check &= !NORTH;
+                }
+            }
+            // If there is only one direction to search, do so iteratively;
+            // otherwise, recursively search all possible paths
+            match to_check {
+                NORTH => y += 1,
+                SOUTH => y -= 1,
+                EAST => x += 1,
+                WEST => x -= 1,
+                0 => return,
+                _ => {
+                    dfs_compute_distances!(self, to_check, NORTH, x, y + 1, distance + 1);
+                    dfs_compute_distances!(self, to_check, SOUTH, x, y - 1, distance + 1);
+                    dfs_compute_distances!(self, to_check, EAST, x + 1, y, distance + 1);
+                    dfs_compute_distances!(self, to_check, WEST, x - 1, y, distance + 1);
+                    return;
+                }
+            }
+            distance += 1;
+            cell = Coordinates(x, y);
         }
     }
 
