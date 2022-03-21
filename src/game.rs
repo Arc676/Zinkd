@@ -464,12 +464,16 @@ pub fn update_game(
                             game_state.time_since_last_move = Duration::ZERO;
                             match map.cell_at_mut(position) {
                                 GridCell::Path(exits, item) => {
-                                    // Ignore the direction from which the player came. If the current
-                                    // tile allows moving in any direction other than the direction in which
-                                    // the player is already moving, then stop moving. Otherwise keep walking.
+                                    // Ignore the direction from which the player came. If there
+                                    // is only one direction in which the player can move,
+                                    // then move in that direction. Otherwise stop.
                                     let backwards = get_opposite_direction(step);
-                                    if *exits & !backwards != step {
-                                        clear_move(&mut game_state);
+                                    let available = *exits & !backwards;
+                                    match available {
+                                        NORTH | SOUTH | EAST | WEST => {
+                                            game_state.current_move = Some(available)
+                                        }
+                                        _ => clear_move(&mut game_state),
                                     }
 
                                     // Check for items
