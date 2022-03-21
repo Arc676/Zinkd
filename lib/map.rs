@@ -400,7 +400,7 @@ mod tests {
             render[y][x] = (b'1' + i as u8) as char;
         }
 
-        let rendered = render.iter().fold(String::new(), |mut text, row| {
+        let rendered = render.iter().rev().fold(String::new(), |mut text, row| {
             text.push('@');
             text.push_str(row.iter().collect::<String>().as_str());
             text.push_str("@\n");
@@ -408,20 +408,24 @@ mod tests {
         });
         println!("@@@@@@@@@@@@\n{}@@@@@@@@@@@@", rendered);
 
-        let rendered = map.distances.iter().fold(String::new(), |mut text, row| {
-            text.push('@');
-            text.push_str(
-                row.iter()
-                    .map(|d| match d {
-                        None => "x".to_string(),
-                        Some(d) => format!("{}", d),
-                    })
-                    .collect::<String>()
-                    .as_str(),
-            );
-            text.push_str("@\n");
-            text
-        });
+        let rendered = map
+            .distances
+            .iter()
+            .rev()
+            .fold(String::new(), |mut text, row| {
+                text.push('@');
+                text.push_str(
+                    row.iter()
+                        .map(|d| match d {
+                            None => "x".to_string(),
+                            Some(d) => format!("{}", d),
+                        })
+                        .collect::<String>()
+                        .as_str(),
+                );
+                text.push_str("@\n");
+                text
+            });
         println!("@@@@@@@@@@@@\n{}@@@@@@@@@@@@", rendered);
     }
 }
