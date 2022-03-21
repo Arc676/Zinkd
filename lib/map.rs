@@ -119,10 +119,10 @@ pub struct Map {
 }
 
 macro_rules! dfs_compute_distances {
-    ($map:expr, $exits:ident, $dir:ident, $x:expr, $y:expr) => {
-        if $exits & $dir != 0 {
+    ($map:expr, $exits:ident, $dir:ident, $x:expr, $y:expr, $dist:expr) => {
+        if $exits & $dir != 0 && $map.distances[$y][$x].is_none() {
             let next = Coordinates($x, $y);
-            $map.compute_distances(next);
+            $map.compute_distances(next, $dist);
         }
     };
 }
@@ -181,27 +181,26 @@ impl Map {
             map.place_item(square2, item2);
         }
 
-        map.compute_distances(goal);
+        map.compute_distances(goal, 0);
 
         map
     }
 
-    fn compute_distances(&mut self, start: Coordinates) {
+    fn compute_distances(&mut self, start: Coordinates, distance: usize) {
         let Coordinates(x, y) = start;
         let mut to_check = 0;
-        match self.cell_at(start) {
-            GridCell::Wall => self.distances[y][x] = None,
-            GridCell::Path(exits, _) => to_check = *exits,
-            GridCell::Goal(exits) => {
-                self.distances[y][x] = Some(0);
+        self.distances[y][x] = match self.cell_at(start) {
+            GridCell::Wall => None,
+            GridCell::Path(exits, _) | GridCell::Goal(exits) => {
                 to_check = *exits;
+                Some(distance)
             }
-        }
+        };
         if to_check != 0 {
-            dfs_compute_distances!(self, to_check, NORTH, x, y + 1);
-            dfs_compute_distances!(self, to_check, SOUTH, x, y - 1);
-            dfs_compute_distances!(self, to_check, EAST, x + 1, y);
-            dfs_compute_distances!(self, to_check, WEST, x - 1, y);
+            dfs_compute_distances!(self, to_check, NORTH, x, y + 1, distance + 1);
+            dfs_compute_distances!(self, to_check, SOUTH, x, y - 1, distance + 1);
+            dfs_compute_distances!(self, to_check, EAST, x + 1, y, distance + 1);
+            dfs_compute_distances!(self, to_check, WEST, x - 1, y, distance + 1);
         }
     }
 
