@@ -85,6 +85,7 @@ pub struct GameSettings {
     item_density: f64,
     initial_travel_distance: usize,
     default_zoom_level: f32,
+    walking_speed: f32,
 }
 
 impl Default for GameSettings {
@@ -98,6 +99,7 @@ impl Default for GameSettings {
             item_density: 0.1,
             initial_travel_distance: 40,
             default_zoom_level: 0.7,
+            walking_speed: 2.,
         }
     }
 }
@@ -137,6 +139,10 @@ impl GameSettings {
 
     pub fn default_zoom_level(&self) -> f32 {
         self.default_zoom_level
+    }
+
+    pub fn walking_speed(&self) -> f32 {
+        self.walking_speed
     }
 }
 
@@ -187,11 +193,11 @@ pub fn settings_ui(
             });
         }
 
-        number_setting(ui, &mut settings.map_width, 20, 120, "Map width");
-        number_setting(ui, &mut settings.map_height, 20, 120, "Map height");
-
         let sep = Separator::default().spacing(12.).horizontal();
         ui.add(sep);
+
+        number_setting(ui, &mut settings.map_width, 20, 120, "Map width");
+        number_setting(ui, &mut settings.map_height, 20, 120, "Map height");
 
         ui.label(
             "All players' starting positions will be connected to the goal by a path of \
@@ -211,6 +217,14 @@ pub fn settings_ui(
 
         let sep = Separator::default().spacing(12.).horizontal();
         ui.add(sep);
+
+        number_setting(
+            ui,
+            &mut settings.walking_speed,
+            1.,
+            10.,
+            "Walking speed (tiles per second)",
+        );
 
         number_setting(
             ui,
