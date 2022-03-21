@@ -110,11 +110,21 @@ impl Coordinates {
     }
 }
 
-type Grid = Vec<Vec<GridCell>>;
+type Grid<T> = Vec<Vec<T>>;
 pub struct Map {
-    grid: Grid,
+    grid: Grid<GridCell>,
+    distances: Grid<Option<usize>>,
     goal: Coordinates,
     starting_points: Vec<Coordinates>,
+}
+
+macro_rules! dfs_compute_distances {
+    ($map:expr, $exits:ident, $dir:ident, $x:expr, $y:expr) => {
+        if $exits & $dir != 0 {
+            let next = Coordinates($x, $y);
+            $map.compute_distances(next);
+        }
+    };
 }
 
 impl Map {
@@ -126,7 +136,9 @@ impl Map {
         travel_distance: usize,
     ) -> Self {
         let mut grid = Grid::with_capacity(map_height);
+        let mut distances = Grid::with_capacity(map_height);
         for row in 0..map_height {
+            distances.push(vec![None; map_width]);
             grid.push(Vec::with_capacity(map_width));
             for _ in 0..map_width {
                 grid[row].push(GridCell::Wall);
@@ -135,6 +147,7 @@ impl Map {
 
         let mut map = Map {
             grid,
+            distances,
             goal: Coordinates(0, 0),
             starting_points: vec![],
         };
@@ -168,7 +181,28 @@ impl Map {
             map.place_item(square2, item2);
         }
 
+        map.compute_distances(goal);
+
         map
+    }
+
+    fn compute_distances(&mut self, start: Coordinates) {
+        let Coordinates(x, y) = start;
+        let mut to_check = 0;
+        match self.cell_at(start) {
+            GridCell::Wall => self.distances[y][x] = None,
+            GridCell::Path(exits, _) => to_check = *exits,
+            GridCell::Goal(exits) => {
+                self.distances[y][x] = Some(0);
+                to_check = *exits;
+            }
+        }
+        if to_check != 0 {
+            dfs_compute_distances!(self, to_check, NORTH, x, y + 1);
+            dfs_compute_distances!(self, to_check, SOUTH, x, y - 1);
+            dfs_compute_distances!(self, to_check, EAST, x + 1, y);
+            dfs_compute_distances!(self, to_check, WEST, x - 1, y);
+        }
     }
 
     fn place_item(&mut self, coordinates: Coordinates, item: HeldItem) {
@@ -375,5 +409,7 @@ mod tests {
             text
         });
         println!("@@@@@@@@@@@@\n{}@@@@@@@@@@@@", rendered);
+
+        println!("{:?}", map.distances);
     }
 }
