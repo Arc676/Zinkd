@@ -44,7 +44,7 @@ use std::fmt::Formatter;
 use std::fs::{create_dir_all, File};
 use std::io::{Read, Write};
 use std::slice::Iter;
-use zinkd::npc::{ItemAlgorithm, MoveAlgorithm};
+use zinkd::npc::{self, ItemAlgorithm, MoveAlgorithm};
 use zinkd::player::PlayerType;
 
 #[derive(Copy, Clone, PartialEq)]
@@ -82,6 +82,7 @@ pub struct GameSettings {
     players: usize,
     player_sprites: Vec<PlayerSprite>,
     player_names: Vec<String>,
+    is_cc: Vec<bool>,
     player_types: Vec<PlayerType>,
     map_width: usize,
     map_height: usize,
@@ -97,6 +98,7 @@ impl Default for GameSettings {
             players: 2,
             player_sprites: vec![PlayerSprite::Ferris, PlayerSprite::Darryl],
             player_names: vec!["Ferris".to_string(), "Darryl".to_string()],
+            is_cc: vec![false, true],
             player_types: vec![
                 PlayerType::LocalHuman,
                 PlayerType::Computer(MoveAlgorithm::ShortestPath, ItemAlgorithm::HighestGain),
@@ -180,6 +182,7 @@ pub fn settings_ui(
             settings.player_sprites.resize(size, PlayerSprite::Ferris);
             settings.player_names.resize(size, "New Player".to_string());
             settings.player_types.resize(size, PlayerType::LocalHuman);
+            settings.is_cc.resize(size, false);
         }
 
         for i in 0..size {
@@ -205,29 +208,37 @@ pub fn settings_ui(
                         );
                     });
 
-                ui.label("Type:");
-                let ptype = &mut settings.player_types[i];
-                egui::ComboBox::from_id_source(format!("type_picker_{}", i))
-                    .selected_text(ptype.to_string())
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(
-                            ptype,
-                            PlayerType::LocalHuman,
-                            PlayerType::LocalHuman.to_string(),
+                if ui
+                    .checkbox(&mut settings.is_cc[i], "Computer controlled")
+                    .clicked()
+                {
+                    if settings.is_cc[i] {
+                        settings.player_types[i] = PlayerType::Computer(
+                            MoveAlgorithm::ShortestPath,
+                            ItemAlgorithm::HighestGain,
                         );
-                        ui.selectable_value(
-                            ptype,
-                            PlayerType::Computer(
-                                MoveAlgorithm::ShortestPath,
-                                ItemAlgorithm::HighestGain,
-                            ),
-                            PlayerType::Computer(
-                                MoveAlgorithm::ShortestPath,
-                                ItemAlgorithm::HighestGain,
-                            )
-                            .to_string(),
-                        )
-                    })
+                    } else {
+                        settings.player_types[i] = PlayerType::LocalHuman;
+                    }
+                }
+                if let PlayerType::Computer(mv, it) = &mut settings.player_types[i] {
+                    ui.label("Strategy");
+                    egui::ComboBox::from_id_source(format!("move_picker_{}", i))
+                        .selected_text(mv.to_string())
+                        .show_ui(ui, |ui| {
+                            for algo in npc::MOVE_ALGORITHMS {
+                                ui.selectable_value(mv, algo, algo.to_string());
+                            }
+                        });
+                    ui.label("Items");
+                    egui::ComboBox::from_id_source(format!("item_picker_{}", i))
+                        .selected_text(it.to_string())
+                        .show_ui(ui, |ui| {
+                            for algo in npc::ITEM_ALGORITHMS {
+                                ui.selectable_value(it, algo, algo.to_string());
+                            }
+                        });
+                }
             });
         }
 

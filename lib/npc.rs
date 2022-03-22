@@ -41,12 +41,14 @@ use std::fmt::{Display, Formatter};
 pub enum MoveAlgorithm {
     ShortestPath,
 }
+pub const MOVE_ALGORITHMS: [MoveAlgorithm; 1] = [MoveAlgorithm::ShortestPath];
 
 #[derive(Copy, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub enum ItemAlgorithm {
     HighestGain,
 }
+pub const ITEM_ALGORITHMS: [ItemAlgorithm; 1] = [ItemAlgorithm::HighestGain];
 
 impl Display for MoveAlgorithm {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
