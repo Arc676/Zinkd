@@ -52,6 +52,9 @@ pub struct MainCamera;
 #[derive(Component)]
 pub struct EntityTooltip(String);
 
+#[derive(Component)]
+pub struct PlayerNumber(u32);
+
 enum GameAction {
     WaitForInput,
     UsingItem,
@@ -84,6 +87,8 @@ struct ItemUsePreview {
     target_player: u32,
     effect: Option<ItemEffect>,
 }
+
+pub type PlayerList = Vec<Player>;
 
 #[derive(Default)]
 pub struct GameState {
@@ -261,6 +266,7 @@ pub fn setup_game(
     commands.spawn_batch(sprites);
 
     let mut player_names = vec![];
+    let mut players = vec![];
     for (num, sprite, name, ptype, spawn_pos) in izip!(
         0..settings.players(),
         settings.player_sprites_iter(),
@@ -271,6 +277,7 @@ pub fn setup_game(
         let Coordinates(x, y) = spawn_pos;
         player_names.push(name.clone());
         let player = Player::spawn_at(*spawn_pos, name.clone(), num, *ptype);
+        players.push(player);
 
         let texture = asset_server.load(sprite.path());
         let translation = coords_to_vec(*x, *y, 1.);
@@ -289,8 +296,9 @@ pub fn setup_game(
                 ..Default::default()
             })
             .insert(EntityTooltip(name.clone()))
-            .insert(player);
+            .insert(PlayerNumber(num));
     }
+    commands.insert_resource(players);
     commands.insert_resource(map);
 
     let texture = asset_server.load("sprites/DieFaces.png");
@@ -413,10 +421,11 @@ pub fn update_game(
     mut commands: Commands,
     time: Res<Time>,
     mut game_state: ResMut<GameState>,
+    mut players: ResMut<PlayerList>,
     keyboard: Res<Input<KeyCode>>,
     mut map: ResMut<Map>,
-    mut player_query: Query<(&mut Player, &mut Transform, &mut Sprite)>,
-    item_query: Query<(Entity, &Transform, &EntityTooltip), Without<Player>>,
+    mut player_query: Query<(&PlayerNumber, &mut Transform, &mut Sprite)>,
+    item_query: Query<(Entity, &Transform, &EntityTooltip), Without<PlayerNumber>>,
 ) {
     if keyboard.just_released(KeyCode::Escape) {
         game_state.paused = !game_state.paused;
@@ -427,154 +436,155 @@ pub fn update_game(
     if keyboard.just_released(KeyCode::C) {
         game_state.camera_follows_player = true;
     }
-    for (mut player, mut transform, mut sprite) in player_query.iter_mut() {
-        if game_state.active_player == player.player_number() {
-            match game_state.current_action {
-                GameAction::WaitForInput => match player.get_type() {
-                    PlayerType::LocalHuman => {
-                        if let Some(action) = get_control(&keyboard) {
-                            match action {
-                                Control::Roll => {
-                                    let rolled = player.roll();
-                                    game_state.rolled_value = Some(rolled);
-                                    game_state.current_action = GameAction::Moving(0, rolled);
-                                }
-                                Control::Inventory => {
-                                    game_state.inventory_visible = !game_state.inventory_visible
-                                }
-                                _ => (),
-                            }
+    let player = &mut players[game_state.active_player as usize];
+    match game_state.current_action {
+        GameAction::WaitForInput => match player.get_type() {
+            PlayerType::LocalHuman => {
+                if let Some(action) = get_control(&keyboard) {
+                    match action {
+                        Control::Roll => {
+                            let rolled = player.roll();
+                            game_state.rolled_value = Some(rolled);
+                            game_state.current_action = GameAction::Moving(0, rolled);
                         }
-                    }
-                    PlayerType::Computer(_) => {
-                        let rolled = player.roll();
-                        game_state.rolled_value = Some(rolled);
-                        game_state.current_action = GameAction::Moving(0, rolled);
-                    }
-                },
-                GameAction::UsingItem => {}
-                GameAction::Moving(_, remaining) => {
-                    match player.get_type() {
-                        PlayerType::LocalHuman => {
-                            if game_state.current_move.is_none() {
-                                if let Some(Control::Move(step)) = get_control(&keyboard) {
-                                    let previous = player.last_move();
-                                    if directions_are_opposite(step, previous) {
-                                        if let GridCell::Path(exits, _) =
-                                            map.cell_at(player.position())
-                                        {
-                                            match *exits {
-                                                NORTH | SOUTH | EAST | WEST => {}
-                                                _ => return,
-                                            }
-                                        } else {
-                                            panic!("Player not on a path");
-                                        }
-                                    }
-                                    game_state.current_move = Some(step);
-                                }
-                            } else {
-                                game_state.time_since_last_move += time.delta();
-                                if game_state.time_since_last_move.as_secs_f32()
-                                    < game_state.tile_walk_time
-                                {
-                                    return;
-                                }
-                            }
+                        Control::Inventory => {
+                            game_state.inventory_visible = !game_state.inventory_visible
                         }
-                        PlayerType::Computer(algorithm) => {
-                            if game_state.current_move.is_none() {
-                                game_state.current_move =
-                                    Some(algorithm.compute_move(player.position(), &map));
-                            }
-                            game_state.time_since_last_move += time.delta();
-                            if game_state.time_since_last_move.as_secs_f32()
-                                < game_state.tile_walk_time
-                            {
-                                return;
-                            }
-                        }
+                        _ => (),
                     }
-                    if let Some(step) = game_state.current_move {
-                        if player.step(step, &map) {
-                            let position = player.position();
-                            let Coordinates(x, y) = position;
-                            transform.translation =
-                                Vec2::new(x as f32 * 96., y as f32 * 96.).extend(1.);
-                            sprite.flip_x = step == WEST;
-                            // If moving in a new direction, add the new direction to the move list
-                            if step != player.last_move() {
-                                player.append_move(step);
-                            }
-                            game_state.time_since_last_move = Duration::ZERO;
-                            match map.cell_at_mut(position) {
-                                GridCell::Path(exits, item) => {
-                                    // Ignore the direction from which the player came. If there
-                                    // is only one direction in which the player can move,
-                                    // then move in that direction. Otherwise stop.
-                                    let backwards = get_opposite_direction(step);
-                                    let available = *exits & !backwards;
-                                    match available {
-                                        NORTH | SOUTH | EAST | WEST => {
-                                            game_state.current_move = Some(available)
-                                        }
-                                        _ => clear_move(&mut game_state),
+                }
+            }
+            PlayerType::Computer(_) => {
+                let rolled = player.roll();
+                game_state.rolled_value = Some(rolled);
+                game_state.current_action = GameAction::Moving(0, rolled);
+            }
+        },
+        GameAction::UsingItem => {}
+        GameAction::Moving(_, remaining) => {
+            match player.get_type() {
+                PlayerType::LocalHuman => {
+                    if game_state.current_move.is_none() {
+                        if let Some(Control::Move(step)) = get_control(&keyboard) {
+                            let previous = player.last_move();
+                            if directions_are_opposite(step, previous) {
+                                if let GridCell::Path(exits, _) = map.cell_at(player.position()) {
+                                    match *exits {
+                                        NORTH | SOUTH | EAST | WEST => {}
+                                        _ => return,
                                     }
-
-                                    // Check for items
-                                    if item.is_some() {
-                                        let item = item.take().unwrap();
-                                        game_state.picked_up_item =
-                                            Some(item.short_description().to_string());
-                                        player.pick_up(item);
-                                        for (entity, item_transform, _) in item_query.iter() {
-                                            if item_transform.translation.truncate()
-                                                == transform.translation.truncate()
-                                            {
-                                                commands.entity(entity).despawn();
-                                                break;
-                                            }
-                                        }
-                                    }
+                                } else {
+                                    panic!("Player not on a path");
                                 }
-                                GridCell::Goal(_) => {
-                                    game_state.winners.push(player.player_number());
-                                    game_state.winner_names.push(player.name().to_string());
-                                    game_state.current_action = GameAction::HasMoved;
-                                    clear_move(&mut game_state);
-                                    return;
-                                }
-                                _ => (),
                             }
-                            let mut step_count = remaining;
-                            step_count -= 1;
-                            if step_count == 0 {
-                                game_state.current_action = GameAction::HasMoved;
-                                clear_move(&mut game_state);
-                            } else {
-                                game_state.current_action = GameAction::Moving(step, step_count);
-                            }
+                            game_state.current_move = Some(step);
+                        }
+                    } else {
+                        game_state.time_since_last_move += time.delta();
+                        if game_state.time_since_last_move.as_secs_f32() < game_state.tile_walk_time
+                        {
+                            return;
                         }
                     }
                 }
-                GameAction::HasMoved => {
-                    if let Some(action) = get_control(&keyboard) {
-                        match action {
-                            Control::Inventory => {
-                                game_state.inventory_visible = !game_state.inventory_visible
+                PlayerType::Computer(algorithm) => {
+                    if game_state.current_move.is_none() {
+                        game_state.current_move =
+                            Some(algorithm.compute_move(player.position(), &map));
+                    }
+                    game_state.time_since_last_move += time.delta();
+                    if game_state.time_since_last_move.as_secs_f32() < game_state.tile_walk_time {
+                        return;
+                    }
+                }
+            }
+            if let Some(step) = game_state.current_move {
+                if player.step(step, &map) {
+                    let (mut transform, mut sprite) = {
+                        let (mut transform, mut sprite) = (None, None);
+                        for (num, t, s) in player_query.iter_mut() {
+                            if num.0 == game_state.active_player {
+                                transform = Some(t);
+                                sprite = Some(s);
+                                break;
                             }
-                            Control::EndTurn => {
-                                player.end_turn();
-                                if game_state.winners.len() == game_state.player_count as usize - 1
-                                {
-                                    game_state.game_over = true;
-                                } else {
-                                    end_turn(&mut game_state)
+                        }
+                        (transform.unwrap(), sprite.unwrap())
+                    };
+                    let position = player.position();
+                    let Coordinates(x, y) = position;
+                    transform.translation = Vec2::new(x as f32 * 96., y as f32 * 96.).extend(1.);
+                    sprite.flip_x = step == WEST;
+                    // If moving in a new direction, add the new direction to the move list
+                    if step != player.last_move() {
+                        player.append_move(step);
+                    }
+                    game_state.time_since_last_move = Duration::ZERO;
+                    match map.cell_at_mut(position) {
+                        GridCell::Path(exits, item) => {
+                            // Ignore the direction from which the player came. If there
+                            // is only one direction in which the player can move,
+                            // then move in that direction. Otherwise stop.
+                            let backwards = get_opposite_direction(step);
+                            let available = *exits & !backwards;
+                            match available {
+                                NORTH | SOUTH | EAST | WEST => {
+                                    game_state.current_move = Some(available)
+                                }
+                                _ => clear_move(&mut game_state),
+                            }
+
+                            // Check for items
+                            if item.is_some() {
+                                let item = item.take().unwrap();
+                                game_state.picked_up_item =
+                                    Some(item.short_description().to_string());
+                                player.pick_up(item);
+                                for (entity, item_transform, _) in item_query.iter() {
+                                    if item_transform.translation.truncate()
+                                        == transform.translation.truncate()
+                                    {
+                                        commands.entity(entity).despawn();
+                                        break;
+                                    }
                                 }
                             }
-                            _ => (),
+                        }
+                        GridCell::Goal(_) => {
+                            game_state.winners.push(player.player_number());
+                            game_state.winner_names.push(player.name().to_string());
+                            game_state.current_action = GameAction::HasMoved;
+                            clear_move(&mut game_state);
+                            return;
+                        }
+                        _ => (),
+                    }
+                    let mut step_count = remaining;
+                    step_count -= 1;
+                    if step_count == 0 {
+                        game_state.current_action = GameAction::HasMoved;
+                        clear_move(&mut game_state);
+                    } else {
+                        game_state.current_action = GameAction::Moving(step, step_count);
+                    }
+                }
+            }
+        }
+        GameAction::HasMoved => {
+            if let Some(action) = get_control(&keyboard) {
+                match action {
+                    Control::Inventory => {
+                        game_state.inventory_visible = !game_state.inventory_visible
+                    }
+                    Control::EndTurn => {
+                        player.end_turn();
+                        if game_state.winners.len() == game_state.player_count as usize - 1 {
+                            game_state.game_over = true;
+                        } else {
+                            end_turn(&mut game_state)
                         }
                     }
+                    _ => (),
                 }
             }
         }
@@ -588,7 +598,7 @@ pub fn scroll_game(
     input_mouse: Res<Input<MouseButton>>,
     mut prev: Local<Option<Vec2>>,
     mut game_state: ResMut<GameState>,
-    player_query: Query<(&Transform, &Player), Without<MainCamera>>,
+    player_query: Query<(&Transform, &PlayerNumber), Without<MainCamera>>,
 ) {
     let mut tr = Vec2::ZERO;
 
@@ -634,8 +644,8 @@ pub fn scroll_game(
     }
 
     if game_state.camera_follows_player {
-        for (transform, player) in player_query.iter() {
-            if player.player_number() == game_state.active_player {
+        for (transform, number) in player_query.iter() {
+            if number.0 == game_state.active_player {
                 pos.translation = Vec3::new(
                     transform.translation.x,
                     transform.translation.y,
@@ -653,7 +663,7 @@ pub fn scroll_game(
 
 pub fn control_panel(
     mut game_state: ResMut<GameState>,
-    mut query: Query<&mut Player>,
+    players: Res<PlayerList>,
     mut egui_context: ResMut<EguiContext>,
 ) {
     egui::SidePanel::left("Control Panel").show(egui_context.ctx_mut(), |ui| {
@@ -730,7 +740,7 @@ pub fn control_panel(
         let sep = egui::Separator::default().spacing(12.).horizontal();
         ui.add(sep);
 
-        let player = get_player_with_number(game_state.active_player, &mut query);
+        let player = &players[game_state.active_player as usize];
         ui.heading(format!("Die weights for {}", player.name()));
         let (painter, to_screen) = get_painter(ui);
         die_weight_labels(&painter, to_screen);
@@ -738,15 +748,6 @@ pub fn control_panel(
             .die()
             .visualize_weights(&painter, to_screen, egui::Color32::BLUE);
     });
-}
-
-fn get_player_with_number<'a>(number: u32, query: &'a mut Query<&mut Player>) -> Mut<'a, Player> {
-    for player in query.iter_mut() {
-        if player.player_number() == number {
-            return player;
-        }
-    }
-    panic!("No player with given number");
 }
 
 fn get_painter(ui: &mut egui::Ui) -> (egui::Painter, egui::emath::RectTransform) {
@@ -778,7 +779,7 @@ fn die_weight_labels(painter: &egui::Painter, to_screen: egui::emath::RectTransf
 
 fn item_preview(
     egui_context: &mut ResMut<EguiContext>,
-    query: &mut Query<&mut Player>,
+    players: &mut ResMut<PlayerList>,
     game_state: &mut ResMut<GameState>,
 ) -> ItemAction {
     let mut chosen_action = ItemAction::NoAction;
@@ -794,13 +795,12 @@ fn item_preview(
             match item_preview.item_type {
                 _ => {
                     let (die_before, mut die_after) = {
-                        let target_player =
-                            get_player_with_number(item_preview.target_player, query);
+                        let target_player = &mut players[item_preview.target_player as usize];
                         let die_before = target_player.die().clone();
                         let die_after = die_before.clone();
                         (die_before, die_after)
                     };
-                    let user = get_player_with_number(item_preview.source_player, query);
+                    let user = &mut players[item_preview.source_player as usize];
                     user.use_item_on_die(&mut die_after, item_preview.item_index);
                     item_preview.effect = Some(ItemEffect::DieTransform(die_before, die_after));
                 }
@@ -817,10 +817,10 @@ fn item_preview(
             ));
             if ui.button("Confirm").clicked() {
                 let item = {
-                    let mut user = get_player_with_number(item_preview.source_player, query);
+                    let user = &mut players[item_preview.source_player as usize];
                     user.take_item(item_preview.item_index)
                 };
-                let mut target = get_player_with_number(item_preview.target_player, query);
+                let mut target = &mut players[item_preview.target_player as usize];
                 item.use_item(&mut target);
                 chosen_action = ItemAction::UseItem;
             }
@@ -857,10 +857,10 @@ fn item_preview(
 
 fn inventory_window(
     egui_context: &mut ResMut<EguiContext>,
-    query: &mut Query<&mut Player>,
+    players: &mut ResMut<PlayerList>,
     game_state: &mut ResMut<GameState>,
 ) {
-    let player = get_player_with_number(game_state.active_player, query);
+    let player = &mut players[game_state.active_player as usize];
     egui::SidePanel::right("Inventory").show(egui_context.ctx_mut(), |ui| {
         game_state.right_panel_width = ui.available_width();
         ui.heading(format!("{}'s inventory", player.name()));
@@ -920,20 +920,20 @@ fn inventory_window(
 
 pub fn item_panel(
     mut egui_context: ResMut<EguiContext>,
-    mut query: Query<&mut Player>,
+    mut players: ResMut<PlayerList>,
     mut game_state: ResMut<GameState>,
 ) {
     if game_state.paused || game_state.game_over {
         return;
     }
     if let GameAction::UsingItem = game_state.current_action {
-        match item_preview(&mut egui_context, &mut query, &mut game_state) {
+        match item_preview(&mut egui_context, &mut players, &mut game_state) {
             ItemAction::NoAction => {}
             ItemAction::UseItem => end_turn(&mut game_state),
             ItemAction::CancelItem => game_state.current_action = GameAction::HasMoved,
         }
     } else if game_state.inventory_visible {
-        inventory_window(&mut egui_context, &mut query, &mut game_state);
+        inventory_window(&mut egui_context, &mut players, &mut game_state);
     } else {
         game_state.right_panel_width = 0.;
     }
