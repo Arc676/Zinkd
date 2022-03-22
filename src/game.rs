@@ -55,6 +55,12 @@ pub struct EntityTooltip(String);
 #[derive(Component)]
 pub struct PlayerNumber(u32);
 
+impl PartialEq<u32> for PlayerNumber {
+    fn eq(&self, other: &u32) -> bool {
+        self.0 == *other
+    }
+}
+
 enum GameAction {
     WaitForInput,
     UsingItem,
@@ -503,7 +509,7 @@ pub fn update_game(
                     let (mut transform, mut sprite) = {
                         let (mut transform, mut sprite) = (None, None);
                         for (num, t, s) in player_query.iter_mut() {
-                            if num.0 == game_state.active_player {
+                            if *num == game_state.active_player {
                                 transform = Some(t);
                                 sprite = Some(s);
                                 break;
@@ -645,7 +651,7 @@ pub fn scroll_game(
 
     if game_state.camera_follows_player {
         for (transform, number) in player_query.iter() {
-            if number.0 == game_state.active_player {
+            if *number == game_state.active_player {
                 pos.translation = Vec3::new(
                     transform.translation.x,
                     transform.translation.y,
