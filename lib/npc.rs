@@ -73,7 +73,7 @@ impl MoveAlgorithm {
 }
 
 impl ItemAlgorithm {
-    pub fn choose_item(&self, user: &Player, players: &[Player]) -> Option<usize> {
+    pub fn choose_item(&self, user: &Player, players: &[Player]) -> Option<(usize, usize)> {
         match self {
             ItemAlgorithm::HighestGain => highest_self_benefit(user, players),
         }
@@ -81,7 +81,7 @@ impl ItemAlgorithm {
 }
 
 // Item computations
-pub fn highest_self_benefit(user: &Player, _players: &[Player]) -> Option<usize> {
+pub fn highest_self_benefit(user: &Player, _players: &[Player]) -> Option<(usize, usize)> {
     let mut best_item = None;
     let mut max_gain = 0.;
     for (i, item) in user.items().enumerate() {
@@ -91,7 +91,10 @@ pub fn highest_self_benefit(user: &Player, _players: &[Player]) -> Option<usize>
             best_item = Some(i);
         }
     }
-    best_item
+    match best_item {
+        None => None,
+        Some(idx) => Some((idx, user.player_number())),
+    }
 }
 
 // Path computations
