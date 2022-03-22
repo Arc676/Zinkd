@@ -35,7 +35,7 @@
 use crate::dice::{WeightTransform, WeightedDie};
 use crate::items::{HeldItem, ItemType};
 use crate::map::{Coordinates, Direction, GridCell, Map};
-use crate::npc::Algorithm;
+use crate::npc::MoveAlgorithm;
 use bevy::ecs::component::Component;
 use std::fmt::{Display, Formatter};
 use std::slice::Iter;
@@ -44,7 +44,7 @@ use std::slice::Iter;
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub enum PlayerType {
     LocalHuman,
-    Computer(Algorithm),
+    Computer(MoveAlgorithm),
 }
 
 impl Display for PlayerType {

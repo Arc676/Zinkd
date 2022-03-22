@@ -33,26 +33,28 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 use crate::map::{Coordinates, Direction, GridCell, Map, EAST, NORTH, SOUTH, WEST};
+use crate::player::Player;
+use bevy::prelude::Query;
 use std::fmt::{Display, Formatter};
 
 #[derive(Copy, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
-pub enum Algorithm {
+pub enum MoveAlgorithm {
     ShortestPath,
 }
 
-impl Display for Algorithm {
+impl Display for MoveAlgorithm {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Algorithm::ShortestPath => write!(f, "Shortest Path"),
+            MoveAlgorithm::ShortestPath => write!(f, "Shortest Path"),
         }
     }
 }
 
-impl Algorithm {
+impl MoveAlgorithm {
     pub fn compute_move(&self, start: Coordinates, map: &Map) -> Direction {
         match self {
-            Algorithm::ShortestPath => shortest_path(start, map),
+            MoveAlgorithm::ShortestPath => shortest_path(start, map),
         }
     }
 }
