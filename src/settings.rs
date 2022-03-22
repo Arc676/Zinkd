@@ -175,21 +175,21 @@ pub fn settings_ui(
         ui.heading("Zink'd: Settings");
 
         number_setting(ui, &mut settings.players, 2, 6, "Number of players");
-        let size = settings.players as usize;
+        let size = settings.players;
         if size > settings.player_sprites.len() {
             settings.player_sprites.resize(size, PlayerSprite::Ferris);
             settings.player_names.resize(size, "New Player".to_string());
             settings.player_types.resize(size, PlayerType::LocalHuman);
         }
 
-        for i in 0..settings.players {
+        for i in 0..size {
             ui.label(format!("Player {}", i + 1));
             ui.horizontal(|ui| {
                 ui.label("Name:");
-                ui.text_edit_singleline(&mut settings.player_names[i as usize]);
+                ui.text_edit_singleline(&mut settings.player_names[i]);
 
                 ui.label("Avatar:");
-                let sprite = &mut settings.player_sprites[i as usize];
+                let sprite = &mut settings.player_sprites[i];
                 egui::ComboBox::from_id_source(format!("sprite_picker_{}", i))
                     .selected_text(sprite.to_string())
                     .show_ui(ui, |ui| {
@@ -206,7 +206,7 @@ pub fn settings_ui(
                     });
 
                 ui.label("Type:");
-                let ptype = &mut settings.player_types[i as usize];
+                let ptype = &mut settings.player_types[i];
                 egui::ComboBox::from_id_source(format!("type_picker_{}", i))
                     .selected_text(ptype.to_string())
                     .show_ui(ui, |ui| {
