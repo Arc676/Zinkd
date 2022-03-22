@@ -103,6 +103,7 @@ pub struct GameState {
     paused: bool,
     active_player: usize,
     player_names: Vec<String>,
+    inspector_player: usize,
     current_action: GameAction,
     hover_item: Option<String>,
     item_preview: ItemUsePreview,
@@ -367,6 +368,7 @@ fn end_turn(game_state: &mut ResMut<GameState>) {
             break;
         }
     }
+    game_state.inspector_player = game_state.active_player;
     game_state.current_action = GameAction::WaitForInput;
     game_state.item_preview = ItemUsePreview::default();
     game_state.hover_item = None;
@@ -765,8 +767,19 @@ pub fn control_panel(
         let sep = egui::Separator::default().spacing(12.).horizontal();
         ui.add(sep);
 
-        let player = &players[game_state.active_player];
-        ui.heading(format!("Die weights for {}", player.name()));
+        let mut inspect = game_state.inspector_player;
+        let player = &players[inspect];
+        ui.horizontal(|ui| {
+            ui.heading(format!("Die weights for"));
+            egui::ComboBox::from_id_source("inspector_picker")
+                .selected_text(player.name())
+                .show_ui(ui, |ui| {
+                    for num in 0..game_state.player_count {
+                        ui.selectable_value(&mut inspect, num, &game_state.player_names[num]);
+                    }
+                });
+        });
+        game_state.inspector_player = inspect;
         let (painter, to_screen) = get_painter(ui);
         die_weight_labels(&painter, to_screen);
         player
