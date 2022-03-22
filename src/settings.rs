@@ -79,7 +79,7 @@ impl PlayerSprite {
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(default))]
 pub struct GameSettings {
-    players: u32,
+    players: usize,
     player_sprites: Vec<PlayerSprite>,
     player_names: Vec<String>,
     player_types: Vec<PlayerType>,
@@ -116,7 +116,7 @@ impl GameSettings {
         *self = GameSettings::default();
     }
 
-    pub fn players(&self) -> u32 {
+    pub fn players(&self) -> usize {
         self.players
     }
 

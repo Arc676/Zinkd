@@ -62,7 +62,7 @@ pub struct Player {
     position: Coordinates,
     inventory: Vec<HeldItem>,
     die: WeightedDie,
-    player_number: u32,
+    player_number: usize,
     ptype: PlayerType,
     moves: Vec<Direction>,
 }
@@ -71,7 +71,7 @@ impl Player {
     pub fn spawn_at(
         position: Coordinates,
         name: String,
-        player_number: u32,
+        player_number: usize,
         ptype: PlayerType,
     ) -> Self {
         Player {
@@ -93,7 +93,7 @@ impl Player {
         self.ptype
     }
 
-    pub fn player_number(&self) -> u32 {
+    pub fn player_number(&self) -> usize {
         self.player_number
     }
 

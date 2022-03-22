@@ -53,10 +53,10 @@ pub struct MainCamera;
 pub struct EntityTooltip(String);
 
 #[derive(Component)]
-pub struct PlayerNumber(u32);
+pub struct PlayerNumber(usize);
 
-impl PartialEq<u32> for PlayerNumber {
-    fn eq(&self, other: &u32) -> bool {
+impl PartialEq<usize> for PlayerNumber {
+    fn eq(&self, other: &usize) -> bool {
         self.0 == *other
     }
 }
@@ -87,10 +87,10 @@ enum ItemAction {
 
 #[derive(Default)]
 struct ItemUsePreview {
-    source_player: u32,
+    source_player: usize,
     item_index: usize,
     item_type: ItemType,
-    target_player: u32,
+    target_player: usize,
     effect: Option<ItemEffect>,
 }
 
@@ -98,9 +98,9 @@ pub type PlayerList = Vec<Player>;
 
 #[derive(Default)]
 pub struct GameState {
-    player_count: u32,
+    player_count: usize,
     paused: bool,
-    active_player: u32,
+    active_player: usize,
     player_names: Vec<String>,
     current_action: GameAction,
     hover_item: Option<String>,
@@ -108,7 +108,7 @@ pub struct GameState {
     inventory_visible: bool,
     picked_up_item: Option<String>,
     rolled_value: Option<u32>,
-    winners: Vec<u32>,
+    winners: Vec<usize>,
     winner_names: Vec<String>,
     game_over: bool,
     camera_follows_player: bool,
@@ -123,11 +123,11 @@ pub struct GameState {
 }
 
 impl GameState {
-    fn get_player_name(&self, player: u32, active: u32) -> &str {
+    fn get_player_name(&self, player: usize, active: usize) -> &str {
         if player == active {
             "yourself"
         } else {
-            &self.player_names[player as usize]
+            &self.player_names[player]
         }
     }
 }
@@ -442,7 +442,7 @@ pub fn update_game(
     if keyboard.just_released(KeyCode::C) {
         game_state.camera_follows_player = true;
     }
-    let player = &mut players[game_state.active_player as usize];
+    let player = &mut players[game_state.active_player];
     match game_state.current_action {
         GameAction::WaitForInput => match player.get_type() {
             PlayerType::LocalHuman => {
@@ -584,7 +584,7 @@ pub fn update_game(
                     }
                     Control::EndTurn => {
                         player.end_turn();
-                        if game_state.winners.len() == game_state.player_count as usize - 1 {
+                        if game_state.winners.len() == game_state.player_count - 1 {
                             game_state.game_over = true;
                         } else {
                             end_turn(&mut game_state)
@@ -684,7 +684,7 @@ pub fn control_panel(
         }
         ui.heading(format!(
             "{}'s turn",
-            game_state.player_names[game_state.active_player as usize]
+            game_state.player_names[game_state.active_player]
         ));
         match game_state.current_action {
             GameAction::WaitForInput => {
@@ -746,7 +746,7 @@ pub fn control_panel(
         let sep = egui::Separator::default().spacing(12.).horizontal();
         ui.add(sep);
 
-        let player = &players[game_state.active_player as usize];
+        let player = &players[game_state.active_player];
         ui.heading(format!("Die weights for {}", player.name()));
         let (painter, to_screen) = get_painter(ui);
         die_weight_labels(&painter, to_screen);
@@ -801,12 +801,12 @@ fn item_preview(
             match item_preview.item_type {
                 _ => {
                     let (die_before, mut die_after) = {
-                        let target_player = &mut players[item_preview.target_player as usize];
+                        let target_player = &mut players[item_preview.target_player];
                         let die_before = target_player.die().clone();
                         let die_after = die_before.clone();
                         (die_before, die_after)
                     };
-                    let user = &mut players[item_preview.source_player as usize];
+                    let user = &mut players[item_preview.source_player];
                     user.use_item_on_die(&mut die_after, item_preview.item_index);
                     item_preview.effect = Some(ItemEffect::DieTransform(die_before, die_after));
                 }
@@ -823,10 +823,10 @@ fn item_preview(
             ));
             if ui.button("Confirm").clicked() {
                 let item = {
-                    let user = &mut players[item_preview.source_player as usize];
+                    let user = &mut players[item_preview.source_player];
                     user.take_item(item_preview.item_index)
                 };
-                let mut target = &mut players[item_preview.target_player as usize];
+                let mut target = &mut players[item_preview.target_player];
                 item.use_item(&mut target);
                 chosen_action = ItemAction::UseItem;
             }
@@ -866,7 +866,7 @@ fn inventory_window(
     players: &mut ResMut<PlayerList>,
     game_state: &mut ResMut<GameState>,
 ) {
-    let player = &mut players[game_state.active_player as usize];
+    let player = &mut players[game_state.active_player];
     egui::SidePanel::right("Inventory").show(egui_context.ctx_mut(), |ui| {
         game_state.right_panel_width = ui.available_width();
         ui.heading(format!("{}'s inventory", player.name()));

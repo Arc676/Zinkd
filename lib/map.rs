@@ -141,7 +141,7 @@ impl Map {
     pub fn generate_random_map(
         map_width: usize,
         map_height: usize,
-        players: u32,
+        players: usize,
         item_density: f64,
         travel_distance: usize,
     ) -> Self {
