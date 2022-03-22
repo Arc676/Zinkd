@@ -44,7 +44,7 @@ use std::fmt::Formatter;
 use std::fs::{create_dir_all, File};
 use std::io::{Read, Write};
 use std::slice::Iter;
-use zinkd::npc::MoveAlgorithm;
+use zinkd::npc::{ItemAlgorithm, MoveAlgorithm};
 use zinkd::player::PlayerType;
 
 #[derive(Copy, Clone, PartialEq)]
@@ -99,7 +99,7 @@ impl Default for GameSettings {
             player_names: vec!["Ferris".to_string(), "Darryl".to_string()],
             player_types: vec![
                 PlayerType::LocalHuman,
-                PlayerType::Computer(MoveAlgorithm::ShortestPath),
+                PlayerType::Computer(MoveAlgorithm::ShortestPath, ItemAlgorithm::HighestGain),
             ],
             map_width: 60,
             map_height: 60,
@@ -217,8 +217,15 @@ pub fn settings_ui(
                         );
                         ui.selectable_value(
                             ptype,
-                            PlayerType::Computer(MoveAlgorithm::ShortestPath),
-                            PlayerType::Computer(MoveAlgorithm::ShortestPath).to_string(),
+                            PlayerType::Computer(
+                                MoveAlgorithm::ShortestPath,
+                                ItemAlgorithm::HighestGain,
+                            ),
+                            PlayerType::Computer(
+                                MoveAlgorithm::ShortestPath,
+                                ItemAlgorithm::HighestGain,
+                            )
+                            .to_string(),
                         )
                     })
             });

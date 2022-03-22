@@ -424,6 +424,22 @@ fn clear_move(game_state: &mut GameState) {
     game_state.time_since_last_move = Duration::ZERO;
 }
 
+fn computer_use_item(game_state: &GameState, players: &mut PlayerList) {
+    let num = game_state.active_player;
+    let choice = {
+        let player = &players[num];
+        if let PlayerType::Computer(_, algorithm) = player.get_type() {
+            algorithm.choose_item(player, players)
+        } else {
+            None
+        }
+    };
+    if let Some((idx, target)) = choice {
+        let item = players[num].take_item(idx);
+        item.use_item(&mut players[target]);
+    }
+}
+
 pub fn update_game(
     mut commands: Commands,
     time: Res<Time>,
@@ -461,7 +477,7 @@ pub fn update_game(
                     }
                 }
             }
-            PlayerType::Computer(_) => {
+            PlayerType::Computer(_, _) => {
                 let rolled = player.roll();
                 game_state.rolled_value = Some(rolled);
                 game_state.current_action = GameAction::Moving(0, rolled);
@@ -494,7 +510,7 @@ pub fn update_game(
                         }
                     }
                 }
-                PlayerType::Computer(algorithm) => {
+                PlayerType::Computer(algorithm, _) => {
                     if game_state.current_move.is_none() {
                         game_state.current_move =
                             Some(algorithm.compute_move(player.position(), &map));
@@ -581,7 +597,9 @@ pub fn update_game(
             if let Some(action) = get_control(&keyboard) {
                 match action {
                     Control::Inventory => {
-                        game_state.inventory_visible = !game_state.inventory_visible
+                        if player.get_type() == PlayerType::LocalHuman {
+                            game_state.inventory_visible = !game_state.inventory_visible
+                        }
                     }
                     Control::EndTurn => {
                         player.end_turn();
@@ -941,6 +959,8 @@ pub fn item_panel(
         }
     } else if game_state.inventory_visible {
         inventory_window(&mut egui_context, &mut players, &mut game_state);
+    } else if game_state.current_action == GameAction::HasMoved {
+        computer_use_item(&*game_state, &mut *players);
     } else {
         game_state.right_panel_width = 0.;
     }
