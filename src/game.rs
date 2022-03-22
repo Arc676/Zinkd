@@ -61,6 +61,7 @@ impl PartialEq<usize> for PlayerNumber {
     }
 }
 
+#[derive(PartialEq)]
 enum GameAction {
     WaitForInput,
     UsingItem,
@@ -932,7 +933,7 @@ pub fn item_panel(
     if game_state.paused || game_state.game_over {
         return;
     }
-    if let GameAction::UsingItem = game_state.current_action {
+    if game_state.current_action == GameAction::UsingItem {
         match item_preview(&mut egui_context, &mut players, &mut game_state) {
             ItemAction::NoAction => {}
             ItemAction::UseItem => end_turn(&mut game_state),
