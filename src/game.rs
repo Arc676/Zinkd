@@ -421,6 +421,12 @@ pub fn update_game(
     if keyboard.just_released(KeyCode::Escape) {
         game_state.paused = !game_state.paused;
     }
+    if keyboard.just_released(KeyCode::Z) {
+        game_state.camera_auto_zoom = true;
+    }
+    if keyboard.just_released(KeyCode::C) {
+        game_state.camera_follows_player = true;
+    }
     for (mut player, mut transform, mut sprite) in player_query.iter_mut() {
         if game_state.active_player == player.player_number() {
             match game_state.current_action {
@@ -710,12 +716,12 @@ pub fn control_panel(
         ui.label("Drag to pan the camera");
         ui.checkbox(
             &mut game_state.camera_follows_player,
-            "Camera follows current player",
+            "Camera follows current player (C)",
         );
         ui.label("Scroll to zoom in or out");
         ui.checkbox(
             &mut game_state.camera_auto_zoom,
-            "Automatically set camera zoom level",
+            "Automatically set camera zoom level (Z)",
         );
         if !game_state.camera_auto_zoom {
             ui.label(format!("Current zoom level: {:.2}", game_state.camera_zoom));
