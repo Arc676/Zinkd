@@ -34,7 +34,6 @@
 
 use crate::map::{Coordinates, Direction, GridCell, Map, EAST, NORTH, SOUTH, WEST};
 use crate::player::Player;
-use bevy::prelude::Query;
 use std::fmt::{Display, Formatter};
 
 #[derive(Copy, Clone, PartialEq)]
@@ -43,10 +42,24 @@ pub enum MoveAlgorithm {
     ShortestPath,
 }
 
+#[derive(Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+pub enum ItemAlgorithm {
+    HighestGain,
+}
+
 impl Display for MoveAlgorithm {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             MoveAlgorithm::ShortestPath => write!(f, "Shortest Path"),
+        }
+    }
+}
+
+impl Display for ItemAlgorithm {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ItemAlgorithm::HighestGain => write!(f, "Highest gain"),
         }
     }
 }
@@ -59,6 +72,29 @@ impl MoveAlgorithm {
     }
 }
 
+impl ItemAlgorithm {
+    pub fn choose_item(&self, user: &Player, players: &[Player]) -> Option<usize> {
+        match self {
+            ItemAlgorithm::HighestGain => highest_self_benefit(user, players),
+        }
+    }
+}
+
+// Item computations
+pub fn highest_self_benefit(user: &Player, _players: &[Player]) -> Option<usize> {
+    let mut best_item = None;
+    let mut max_gain = 0.;
+    for (i, item) in user.items().enumerate() {
+        let benefit = item.item_benefit(user);
+        if benefit > max_gain {
+            max_gain = benefit;
+            best_item = Some(i);
+        }
+    }
+    best_item
+}
+
+// Path computations
 fn shortest_path(start: Coordinates, map: &Map) -> Direction {
     let mut min_distance = usize::MAX;
     let mut best_direction = 0;
