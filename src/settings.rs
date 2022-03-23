@@ -44,6 +44,8 @@ use std::fmt::Formatter;
 use std::fs::{create_dir_all, File};
 use std::io::{Read, Write};
 use std::slice::Iter;
+use zinkd::npc::{self, ItemAlgorithm, MoveAlgorithm};
+use zinkd::player::PlayerType;
 
 #[derive(Copy, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
@@ -77,14 +79,17 @@ impl PlayerSprite {
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(default))]
 pub struct GameSettings {
-    players: u32,
+    players: usize,
     player_sprites: Vec<PlayerSprite>,
     player_names: Vec<String>,
+    is_cc: Vec<bool>,
+    player_types: Vec<PlayerType>,
     map_width: usize,
     map_height: usize,
     item_density: f64,
     initial_travel_distance: usize,
     default_zoom_level: f32,
+    walking_speed: f32,
 }
 
 impl Default for GameSettings {
@@ -93,11 +98,17 @@ impl Default for GameSettings {
             players: 2,
             player_sprites: vec![PlayerSprite::Ferris, PlayerSprite::Darryl],
             player_names: vec!["Ferris".to_string(), "Darryl".to_string()],
+            is_cc: vec![false, true],
+            player_types: vec![
+                PlayerType::LocalHuman,
+                PlayerType::Computer(MoveAlgorithm::ShortestPath, ItemAlgorithm::HighestGain),
+            ],
             map_width: 60,
             map_height: 60,
             item_density: 0.1,
             initial_travel_distance: 40,
             default_zoom_level: 0.7,
+            walking_speed: 2.,
         }
     }
 }
@@ -107,7 +118,7 @@ impl GameSettings {
         *self = GameSettings::default();
     }
 
-    pub fn players(&self) -> u32 {
+    pub fn players(&self) -> usize {
         self.players
     }
 
@@ -117,6 +128,10 @@ impl GameSettings {
 
     pub fn player_names_iter(&self) -> Iter<'_, String> {
         self.player_names.iter()
+    }
+
+    pub fn player_types_iter(&self) -> Iter<'_, PlayerType> {
+        self.player_types.iter()
     }
 
     pub fn map_width(&self) -> usize {
@@ -138,6 +153,10 @@ impl GameSettings {
     pub fn default_zoom_level(&self) -> f32 {
         self.default_zoom_level
     }
+
+    pub fn walking_speed(&self) -> f32 {
+        self.walking_speed
+    }
 }
 
 fn number_setting<T>(ui: &mut Ui, num: &mut T, min: T, max: T, lbl: &str)
@@ -158,18 +177,22 @@ pub fn settings_ui(
         ui.heading("Zink'd: Settings");
 
         number_setting(ui, &mut settings.players, 2, 6, "Number of players");
-        let size = settings.players as usize;
+        let size = settings.players;
         if size > settings.player_sprites.len() {
             settings.player_sprites.resize(size, PlayerSprite::Ferris);
             settings.player_names.resize(size, "New Player".to_string());
+            settings.player_types.resize(size, PlayerType::LocalHuman);
+            settings.is_cc.resize(size, false);
         }
 
-        ui.label("Choose player names and sprites");
-        for i in 0..settings.players {
+        for i in 0..size {
+            ui.label(format!("Player {}", i + 1));
             ui.horizontal(|ui| {
-                ui.label(format!("Player {}:", i + 1));
-                ui.text_edit_singleline(&mut settings.player_names[i as usize]);
-                let sprite = &mut settings.player_sprites[i as usize];
+                ui.label("Name:");
+                ui.text_edit_singleline(&mut settings.player_names[i]);
+
+                ui.label("Avatar:");
+                let sprite = &mut settings.player_sprites[i];
                 egui::ComboBox::from_id_source(format!("sprite_picker_{}", i))
                     .selected_text(sprite.to_string())
                     .show_ui(ui, |ui| {
@@ -184,14 +207,46 @@ pub fn settings_ui(
                             PlayerSprite::Darryl.to_string(),
                         );
                     });
+
+                if ui
+                    .checkbox(&mut settings.is_cc[i], "Computer controlled")
+                    .clicked()
+                {
+                    if settings.is_cc[i] {
+                        settings.player_types[i] = PlayerType::Computer(
+                            MoveAlgorithm::ShortestPath,
+                            ItemAlgorithm::HighestGain,
+                        );
+                    } else {
+                        settings.player_types[i] = PlayerType::LocalHuman;
+                    }
+                }
+                if let PlayerType::Computer(mv, it) = &mut settings.player_types[i] {
+                    ui.label("Strategy");
+                    egui::ComboBox::from_id_source(format!("move_picker_{}", i))
+                        .selected_text(mv.to_string())
+                        .show_ui(ui, |ui| {
+                            for algo in npc::MOVE_ALGORITHMS {
+                                ui.selectable_value(mv, algo, algo.to_string());
+                            }
+                        });
+                    ui.label("Items");
+                    egui::ComboBox::from_id_source(format!("item_picker_{}", i))
+                        .selected_text(it.to_string())
+                        .show_ui(ui, |ui| {
+                            for algo in npc::ITEM_ALGORITHMS {
+                                ui.selectable_value(it, algo, algo.to_string());
+                            }
+                        });
+                }
             });
         }
 
-        number_setting(ui, &mut settings.map_width, 20, 120, "Map width");
-        number_setting(ui, &mut settings.map_height, 20, 120, "Map height");
-
         let sep = Separator::default().spacing(12.).horizontal();
         ui.add(sep);
+
+        number_setting(ui, &mut settings.map_width, 20, 120, "Map width");
+        number_setting(ui, &mut settings.map_height, 20, 120, "Map height");
 
         ui.label(
             "All players' starting positions will be connected to the goal by a path of \
@@ -211,6 +266,14 @@ pub fn settings_ui(
 
         let sep = Separator::default().spacing(12.).horizontal();
         ui.add(sep);
+
+        number_setting(
+            ui,
+            &mut settings.walking_speed,
+            1.,
+            10.,
+            "Walking speed (tiles per second)",
+        );
 
         number_setting(
             ui,

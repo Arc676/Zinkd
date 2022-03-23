@@ -46,6 +46,7 @@ pub trait Item: Send + Sync {
     fn use_item(&self, player: &mut Player);
     fn use_item_on_die(&self, die: &mut WeightedDie);
     fn item_type(&self) -> ItemType;
+    fn item_benefit(&self, target: &Player) -> f64;
 }
 
 const ITEM_TYPES: u32 = 3;
@@ -213,5 +214,9 @@ impl Item for WeightTransfer {
 
     fn item_type(&self) -> ItemType {
         self.item_type
+    }
+
+    fn item_benefit(&self, target: &Player) -> f64 {
+        self.transform.rel_benefit(target.die())
     }
 }

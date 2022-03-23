@@ -35,8 +35,26 @@
 use crate::dice::{WeightTransform, WeightedDie};
 use crate::items::{HeldItem, ItemType};
 use crate::map::{Coordinates, Direction, GridCell, Map};
+use crate::npc::{ItemAlgorithm, MoveAlgorithm};
 use bevy::ecs::component::Component;
+use std::fmt::{Display, Formatter};
 use std::slice::Iter;
+
+#[derive(Copy, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+pub enum PlayerType {
+    LocalHuman,
+    Computer(MoveAlgorithm, ItemAlgorithm),
+}
+
+impl Display for PlayerType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PlayerType::LocalHuman => write!(f, "Human"),
+            PlayerType::Computer(mv, it) => write!(f, "Computer ({}, {})", mv, it),
+        }
+    }
+}
 
 #[derive(Component)]
 pub struct Player {
@@ -44,17 +62,26 @@ pub struct Player {
     position: Coordinates,
     inventory: Vec<HeldItem>,
     die: WeightedDie,
-    player_number: u32,
+    player_number: usize,
+    ptype: PlayerType,
+    moves: Vec<Direction>,
 }
 
 impl Player {
-    pub fn spawn_at(position: Coordinates, name: String, player_number: u32) -> Self {
+    pub fn spawn_at(
+        position: Coordinates,
+        name: String,
+        player_number: usize,
+        ptype: PlayerType,
+    ) -> Self {
         Player {
             name,
             position,
             inventory: vec![],
             die: WeightedDie::fair_die(),
             player_number,
+            ptype,
+            moves: vec![],
         }
     }
 
@@ -62,7 +89,11 @@ impl Player {
         &self.name
     }
 
-    pub fn player_number(&self) -> u32 {
+    pub fn get_type(&self) -> PlayerType {
+        self.ptype
+    }
+
+    pub fn player_number(&self) -> usize {
         self.player_number
     }
 
@@ -130,5 +161,17 @@ impl Player {
 
     pub fn roll(&self) -> u32 {
         self.die.roll()
+    }
+
+    pub fn append_move(&mut self, direction: Direction) {
+        self.moves.push(direction);
+    }
+
+    pub fn last_move(&self) -> Direction {
+        *self.moves.last().unwrap_or(&0)
+    }
+
+    pub fn end_turn(&mut self) {
+        self.moves.clear();
     }
 }

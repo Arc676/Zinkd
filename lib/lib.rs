@@ -33,6 +33,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 pub mod dice;
-pub mod map;
 pub mod items;
+pub mod map;
+pub mod npc;
 pub mod player;

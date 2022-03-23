@@ -61,8 +61,8 @@ fn main() {
         .add_system_set(SystemSet::on_enter(AppState::Game).with_system(game::setup_game))
         .add_system_set(
             SystemSet::on_update(AppState::Game)
-                .with_system(game::scroll_game)
-                .with_system(game::update_game)
+                .with_system(game::scroll_game.label("Camera"))
+                .with_system(game::update_game.before("Camera"))
                 .with_system(game::update_die)
                 .with_system(game::control_panel)
                 .with_system(game::item_panel)

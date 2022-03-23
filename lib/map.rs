@@ -64,7 +64,17 @@ pub fn directions_are_opposite(a: Direction, b: Direction) -> bool {
         SOUTH => b == NORTH,
         EAST => b == WEST,
         WEST => b == EAST,
-        _ => panic!("Unknown direction"),
+        _ => panic!("Unsupported direction"),
+    }
+}
+
+pub fn get_opposite_direction(d: Direction) -> Direction {
+    match d {
+        NORTH => SOUTH,
+        SOUTH => NORTH,
+        EAST => WEST,
+        WEST => EAST,
+        _ => panic!("Unsupported direction"),
     }
 }
 
@@ -110,23 +120,35 @@ impl Coordinates {
     }
 }
 
-type Grid = Vec<Vec<GridCell>>;
+type Grid<T> = Vec<Vec<T>>;
 pub struct Map {
-    grid: Grid,
+    grid: Grid<GridCell>,
+    distances: Grid<Option<usize>>,
     goal: Coordinates,
     starting_points: Vec<Coordinates>,
+}
+
+macro_rules! dfs_compute_distances {
+    ($map:expr, $exits:ident, $dir:ident, $x:expr, $y:expr, $dist:expr) => {
+        if $exits & $dir != 0 {
+            let next = Coordinates($x, $y);
+            $map.compute_distances(next, $dist);
+        }
+    };
 }
 
 impl Map {
     pub fn generate_random_map(
         map_width: usize,
         map_height: usize,
-        players: u32,
+        players: usize,
         item_density: f64,
         travel_distance: usize,
     ) -> Self {
         let mut grid = Grid::with_capacity(map_height);
+        let mut distances = Grid::with_capacity(map_height);
         for row in 0..map_height {
+            distances.push(vec![None; map_width]);
             grid.push(Vec::with_capacity(map_width));
             for _ in 0..map_width {
                 grid[row].push(GridCell::Wall);
@@ -135,6 +157,7 @@ impl Map {
 
         let mut map = Map {
             grid,
+            distances,
             goal: Coordinates(0, 0),
             starting_points: vec![],
         };
@@ -168,7 +191,77 @@ impl Map {
             map.place_item(square2, item2);
         }
 
+        map.compute_distances(goal, 0);
+
         map
+    }
+
+    fn compute_distances(&mut self, mut cell: Coordinates, mut distance: usize) {
+        let Coordinates(mut x, mut y) = cell;
+        // Optimize recursion depth by searching straight paths iteratively
+        loop {
+            // First determine the possible travel directions from the current cell
+            // and store the distance of this cell from the goal
+            let mut to_check = 0;
+            self.distances[y][x] = match self.cell_at(cell) {
+                GridCell::Wall => None,
+                GridCell::Path(exits, _) | GridCell::Goal(exits) => {
+                    to_check = *exits;
+                    Some(distance)
+                }
+            };
+            if to_check == 0 {
+                return;
+            }
+            // Eliminate directions that do not need to be searched
+            // because they lead out of bounds
+            if x == 0 {
+                to_check &= !WEST;
+            } else if let Some(d) = self.distances[y][x - 1] {
+                if d <= distance + 1 {
+                    to_check &= !WEST;
+                }
+            }
+            if x + 1 >= self.width() {
+                to_check &= !EAST;
+            } else if let Some(d) = self.distances[y][x + 1] {
+                if d <= distance + 1 {
+                    to_check &= !EAST;
+                }
+            }
+            if y == 0 {
+                to_check &= !SOUTH;
+            } else if let Some(d) = self.distances[y - 1][x] {
+                if d <= distance + 1 {
+                    to_check &= !SOUTH;
+                }
+            }
+            if y + 1 >= self.height() {
+                to_check &= !NORTH;
+            } else if let Some(d) = self.distances[y + 1][x] {
+                if d <= distance + 1 {
+                    to_check &= !NORTH;
+                }
+            }
+            // If there is only one direction to search, do so iteratively;
+            // otherwise, recursively search all possible paths
+            match to_check {
+                NORTH => y += 1,
+                SOUTH => y -= 1,
+                EAST => x += 1,
+                WEST => x -= 1,
+                0 => return,
+                _ => {
+                    dfs_compute_distances!(self, to_check, NORTH, x, y + 1, distance + 1);
+                    dfs_compute_distances!(self, to_check, SOUTH, x, y - 1, distance + 1);
+                    dfs_compute_distances!(self, to_check, EAST, x + 1, y, distance + 1);
+                    dfs_compute_distances!(self, to_check, WEST, x - 1, y, distance + 1);
+                    return;
+                }
+            }
+            distance += 1;
+            cell = Coordinates(x, y);
+        }
     }
 
     fn place_item(&mut self, coordinates: Coordinates, item: HeldItem) {
@@ -319,6 +412,11 @@ impl Map {
         self.starting_points.iter()
     }
 
+    pub fn distance_to_goal(&self, coordinates: Coordinates) -> Option<usize> {
+        let Coordinates(x, y) = coordinates;
+        self.distances[y][x]
+    }
+
     pub fn cell_at(&self, coordinates: Coordinates) -> &GridCell {
         let Coordinates(x, y) = coordinates;
         &self.grid[y][x]
@@ -347,17 +445,16 @@ mod tests {
                     SOUTH => 'v',
                     EAST => '>',
                     WEST => '<',
-                    _ => {
-                        if direction == NORTH | SOUTH {
-                            '|'
-                        } else if direction == EAST | WEST {
-                            '-'
-                        } else if direction == NORTH | EAST | SOUTH | WEST {
-                            '+'
-                        } else {
-                            '?'
-                        }
-                    }
+                    LONGITUDINAL => '|',
+                    LATITUDINAL => '-',
+                    OMNIDIRECTIONAL => '+',
+                    NORTHEAST => 'L',
+                    NOT_NORTH => 'T',
+                    SOUTHEAST => 'Γ',
+                    SOUTHWEST => '¬',
+                    NOT_SOUTH => '⊥',
+                    NOT_WEST => '⊢',
+                    _ => '?',
                 },
                 GridCell::Goal(_) => '*',
             };
@@ -368,12 +465,32 @@ mod tests {
             render[y][x] = (b'1' + i as u8) as char;
         }
 
-        let rendered = render.iter().fold(String::new(), |mut text, row| {
+        let rendered = render.iter().rev().fold(String::new(), |mut text, row| {
             text.push('@');
             text.push_str(row.iter().collect::<String>().as_str());
             text.push_str("@\n");
             text
         });
+        println!("@@@@@@@@@@@@\n{}@@@@@@@@@@@@", rendered);
+
+        let rendered = map
+            .distances
+            .iter()
+            .rev()
+            .fold(String::new(), |mut text, row| {
+                text.push('@');
+                text.push_str(
+                    row.iter()
+                        .map(|d| match d {
+                            None => "x".to_string(),
+                            Some(d) => format!("{}", d),
+                        })
+                        .collect::<String>()
+                        .as_str(),
+                );
+                text.push_str("@\n");
+                text
+            });
         println!("@@@@@@@@@@@@\n{}@@@@@@@@@@@@", rendered);
     }
 }
