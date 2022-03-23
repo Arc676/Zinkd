@@ -707,32 +707,46 @@ pub fn control_panel(
         ));
         match game_state.current_action {
             GameAction::WaitForInput => {
-                ui.label("Press R to roll");
-                ui.label(
-                    "Press E to view your inventory (note that you cannot use items at this time)",
-                );
+                let active = &players[game_state.active_player];
+                match active.get_type() {
+                    PlayerType::LocalHuman => {
+                        ui.label("Press R to roll");
+                        ui.label(
+                            "Press E to view your inventory (note that you cannot use items at this time)",
+                        );
+                    }
+                    _ => {
+                        ui.label(format!("Waiting for {} to take their turn", active.name()));
+                    }
+                }
             }
             GameAction::UsingItem => {
                 ui.label("Consult the item preview to see what the item will do.");
                 ui.label("Click confirm to use the item.");
             }
             GameAction::Moving(_, remaining) => {
-                ui.label("Use WASD to move");
+                let is_player = players[game_state.active_player].get_type() == PlayerType::LocalHuman;
+                if is_player {
+                    ui.label("Use WASD to move");
+                }
                 ui.label(format!("{} steps remaining", remaining));
-                if let Some(description) = &game_state.picked_up_item {
-                    ui.label(format!("You picked up an item: {}", description));
+                if is_player {
+                    if let Some(description) = &game_state.picked_up_item {
+                        ui.label(format!("You picked up an item: {}", description));
+                    }
                 }
             }
             GameAction::HasMoved => {
+                let active = &players[game_state.active_player];
                 if game_state.winners.contains(&game_state.active_player) {
-                    ui.label("You have reached the goal!");
-                } else {
+                    ui.label(format!("{} has reached the goal!", active.name()));
+                } else if active.get_type() == PlayerType::LocalHuman {
                     if let Some(description) = &game_state.picked_up_item {
                         ui.label(format!("You picked up an item: {}", description));
                     }
                     ui.label("Press E to view your inventory (you may now use items)");
                 }
-                ui.label("Press Enter to end your turn");
+                ui.label("Press Enter to end the turn");
             }
         }
 
